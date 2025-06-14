@@ -48,7 +48,7 @@ This is a real-time MIDI controller + LLM music generation system that integrate
 
 ### External Dependencies
 - MCP MIDI server must be running at `/Users/karaage/GitHub/mcp-midi-server`
-- Ollama server with Gemma2:2b model (configurable via ANTHROPIC_MODEL env var)
+- Ollama server with Gemma3:4b model (configurable via ANTHROPIC_MODEL env var)
 - MIDI hardware ports (auto-detects first available input/output)
 
 ### Error Handling Strategy
