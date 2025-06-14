@@ -55,4 +55,11 @@ export class MCPClient {
       value
     });
   }
+
+  async sendMidiSequence(bpm: number, notes: number[]): Promise<any> {
+    return await this.callTool('send_midi_sequence', {
+      bpm,
+      notes
+    });
+  }
 }

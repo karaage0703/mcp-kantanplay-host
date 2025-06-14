@@ -22,7 +22,7 @@ export class MCPServerIntegration {
 
       const tools = await this.mcpClient.listTools();
       console.log('Available tools:', tools);
-      
+
       // MIDIポートを開く
       try {
         const openPortResult = await this.mcpClient.callTool('open_midi_port', {

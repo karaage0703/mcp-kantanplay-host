@@ -127,32 +127,24 @@ export class MusicGenerator {
     this.playSequence();
   }
 
-  private playSequence(): void {
+  private async playSequence(): Promise<void> {
     if (!this.currentSequence || !this.isPlaying) return;
 
-    let noteIndex = 0;
-    const playNote = async () => {
-      if (!this.isPlaying || !this.currentSequence) return;
-
-      const note = this.currentSequence.notes[noteIndex];
-      const duration = this.currentSequence.durations[noteIndex];
-      const velocity = this.currentSequence.velocities[noteIndex];
-
-      try {
-        await this.mcpClient.sendMidiNote(note, velocity, duration);
-        console.log(`Playing note: ${note}, velocity: ${velocity}, duration: ${duration}ms`);
-      } catch (error) {
-        console.error('Error playing note:', error);
-      }
-
-      noteIndex = (noteIndex + 1) % this.currentSequence.notes.length;
+    const tempo = 120; // Default BPM, could be made configurable
+    
+    try {
+      console.log(`Playing sequence with ${this.currentSequence.notes.length} notes at ${tempo} BPM`);
+      await this.mcpClient.sendMidiSequence(tempo, this.currentSequence.notes);
+      console.log('Sequence playback completed');
       
+      // Schedule next playback if still playing
       if (this.isPlaying) {
-        this.playbackIntervalId = setTimeout(playNote, duration);
+        const totalDuration = this.currentSequence.notes.length * (60000 / tempo) * 2; // Approximate duration
+        this.playbackIntervalId = setTimeout(() => this.playSequence(), totalDuration);
       }
-    };
-
-    playNote();
+    } catch (error) {
+      console.error('Error playing sequence:', error);
+    }
   }
 
   async stopPlayback(): Promise<void> {

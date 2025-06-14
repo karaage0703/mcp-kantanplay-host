@@ -23,7 +23,7 @@ class KantanPlayHost {
   constructor(config: AppConfig) {
     this.ollamaClient = new OllamaClient(config.ollamaUrl, config.ollamaModel);
     this.midiController = new MidiController();
-    
+
     this.mcpIntegration = new MCPServerIntegration({
       serverPath: config.mcpServerPath
     });
