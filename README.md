@@ -19,21 +19,21 @@ MCPホストを使用してローカルLLM（Gemma3:4B）でかんたんプレ�
 
 ### 1. 依存関係のインストール
 
-\`\`\`bash
+```bash
 npm install
-\`\`\`
+```
 
 ### 2. DockerでOllamaを起動
 
-\`\`\`bash
+```bash
 docker run -d -v ollama:/root/.ollama -p 11434:11434 --name ollama ollama/ollama
-\`\`\`
+```
 
 ### 3. Gemma3:4Bモデルをダウンロード
 
-\`\`\`bash
-docker exec -it ollama ollama pull gemma2:2b
-\`\`\`
+```bash
+docker exec -it ollama ollama pull gemma3:4b
+```
 
 ### 4. MCP MIDI Serverの準備
 
@@ -44,29 +44,29 @@ uvで実行されるように設定済みです。
 
 ### ビルド
 
-\`\`\`bash
+```bash
 npm run build
-\`\`\`
+```
 
 ### 実行
 
-\`\`\`bash
+```bash
 npm start
-\`\`\`
+```
 
 ### 開発モード
 
-\`\`\`bash
+```bash
 npm run dev
-\`\`\`
+```
 
 ## 環境変数
 
-- \`OLLAMA_URL\`: OllamaサーバーのURL（デフォルト: http://localhost:11434）
-- \`OLLAMA_MODEL\`: 使用するモデル名（デフォルト: gemma2:2b）
-- \`MCP_MIDI_SERVER_PATH\`: MCP MIDIサーバーのパス（デフォルト: uv）
-- \`MIDI_INPUT_PORT\`: MIDI入力ポート番号
-- \`MIDI_OUTPUT_PORT\`: MIDI出力ポート番号
+- `OLLAMA_URL`: OllamaサーバーのURL（デフォルト: http://localhost:11434）
+- `OLLAMA_MODEL`: 使用するモデル名（デフォルト: gemma3:4b）
+- `MCP_MIDI_SERVER_PATH`: MCP MIDIサーバーのパス（デフォルト: uv）
+- `MIDI_INPUT_PORT`: MIDI入力ポート番号
+- `MIDI_OUTPUT_PORT`: MIDI出力ポート番号
 
 ## かんたんプレイ MIDI マッピング
 
