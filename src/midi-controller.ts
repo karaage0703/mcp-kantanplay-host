@@ -11,6 +11,7 @@ export interface MidiControllerMapping {
 export const XTOUCH_MINI_MAPPING: MidiControllerMapping[] = [
   { controller: 1, parameter: "tempo", min: 60, max: 180 },
   { controller: 2, parameter: "complexity", min: 1, max: 10 },
+  { controller: 3, parameter: "mood", min: 0, max: 5 }, // Mood selection
 ];
 
 export class MidiController {
@@ -72,13 +73,8 @@ export class MidiController {
           this.parameters[mapping.parameter] = Math.round(scaledValue);
         }
 
-        if (controller === 3) {
-          const keys = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
-          const keyIndex = Math.floor((value / 127) * keys.length);
-          this.parameters.key = keys[Math.min(keyIndex, keys.length - 1)];
-        }
-
-        if (controller === 4) {
+        // Controller 3: Mood selection
+        if (controller === 3 && mapping.parameter === "mood") {
           const moods = ["happy", "sad", "energetic", "calm", "mysterious", "dramatic"];
           const moodIndex = Math.floor((value / 127) * moods.length);
           this.parameters.mood = moods[Math.min(moodIndex, moods.length - 1)];
@@ -103,6 +99,6 @@ export class MidiController {
 
   close(): void {
     this.input.closePort();
-    this.output.closePort();
+    // Output port is not used, so we don't need to close it
   }
 }

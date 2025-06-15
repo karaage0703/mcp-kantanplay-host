@@ -34,12 +34,41 @@ export class MCPServerIntegration {
       const tools = (await this.mcpClient.listTools()) as { name: string; description?: string }[];
       console.log("Available tools:", tools);
 
-      // MIDIポートを開く
+      // MIDIポートを開く - UM-1を探して選択
       try {
+        // まず利用可能なポートを確認
+        const listResult = await this.mcpClient.callTool("list_midi_ports", {});
+        console.log("Available MIDI ports:", listResult);
+        
+        // レスポンスからテキストを抽出
+        let portListText = "";
+        if (typeof listResult === "object" && listResult !== null) {
+          const result = listResult as any;
+          if (result.content && Array.isArray(result.content)) {
+            portListText = result.content[0]?.text || "";
+          }
+        }
+        
+        // UM-1のインデックスを見つける
+        let um1Index = 1; // デフォルトは1
+        if (portListText.includes("UM-1")) {
+          const lines = portListText.split('\n');
+          for (let i = 0; i < lines.length; i++) {
+            if (lines[i].includes("UM-1") && lines[i].match(/^(\d+):/)) {
+              const match = lines[i].match(/^(\d+):/);
+              if (match) {
+                um1Index = parseInt(match[1]);
+                break;
+              }
+            }
+          }
+        }
+        
+        console.log(`Opening MIDI port at index ${um1Index} (UM-1)...`);
         const openPortResult = (await this.mcpClient.callTool("open_midi_port", {
-          port_index: 0,
+          port_index: um1Index,
         })) as { success: boolean; message?: string };
-        console.log("MIDI port opened:", openPortResult);
+        console.log(`MIDI port opened:`, openPortResult);
       } catch (error) {
         console.error("Failed to open MIDI port:", error);
       }

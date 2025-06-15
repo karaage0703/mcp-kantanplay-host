@@ -1,6 +1,8 @@
 import { OllamaClient, MusicParameters } from "./ollama-client";
 import { MCPClient } from "./mcp-client";
 import { isValidKantanPlayNote, MUSICAL_SCALES } from "./kantanplay-mapping";
+import { MusicVisualizer } from "./visualization";
+import { MusicLogger } from "./logger";
 
 export interface MusicSequence {
   notes: number[];
@@ -14,21 +16,26 @@ export class MusicGenerator {
   private isPlaying: boolean = false;
   private currentSequence: MusicSequence | null = null;
   private playbackIntervalId: NodeJS.Timeout | null = null;
+  private logger: MusicLogger;
+  private currentParams: MusicParameters | null = null;
 
   constructor(ollamaClient: OllamaClient, mcpClient: MCPClient) {
     this.ollamaClient = ollamaClient;
     this.mcpClient = mcpClient;
+    this.logger = MusicLogger.getInstance();
   }
 
   async generateSequence(params: MusicParameters): Promise<MusicSequence> {
     try {
-      console.log("Generating music sequence with params:", params);
+      console.log(MusicVisualizer.visualizeParameters(params));
+      console.log("🎵 Generating music sequence...");
+      
       const notes = await this.ollamaClient.generateMusicSequence(params);
-      console.log("Generated notes:", notes);
       const validNotes = notes.filter(isValidKantanPlayNote);
 
       if (validNotes.length === 0) {
         validNotes.push(...this.getFallbackSequence(params));
+        console.log("⚠️  No valid notes generated, using fallback sequence");
       }
 
       const durations = this.generateDurations(validNotes.length, params.tempo);
@@ -40,9 +47,19 @@ export class MusicGenerator {
         velocities,
       };
 
+      // Display the generated sequence with visualization
+      console.log(MusicVisualizer.visualizeSequence(this.currentSequence, params));
+      
+      // Log structured data for analysis
+      const sessionLog = MusicVisualizer.createSessionLog(params, this.currentSequence);
+      console.log(`📊 Session: ${this.logger.getSessionId()}`);
+      
+      // Log to structured log file
+      this.logger.logGeneration(params, this.currentSequence, (sessionLog as any).analysis);
+
       return this.currentSequence;
     } catch (error) {
-      console.error("Error generating music sequence:", error);
+      console.error("❌ Error generating music sequence:", error);
       return this.getFallbackMusicSequence(params);
     }
   }
@@ -129,6 +146,9 @@ export class MusicGenerator {
     }
 
     this.isPlaying = true;
+    this.currentParams = params;
+    this.logger.logPlaybackStart(params);
+    
     await this.generateSequence(params);
 
     if (!this.currentSequence) {
@@ -140,16 +160,14 @@ export class MusicGenerator {
   }
 
   private async playSequence(): Promise<void> {
-    if (!this.currentSequence || !this.isPlaying) return;
+    if (!this.currentSequence || !this.isPlaying || !this.currentParams) return;
 
-    const tempo = 120; // Default BPM, could be made configurable
+    const tempo = this.currentParams.tempo;
 
     try {
-      console.log(
-        `Playing sequence with ${this.currentSequence.notes.length} notes at ${tempo} BPM`,
-      );
+      console.log(`\n🎶 Playing sequence with ${this.currentSequence.notes.length} notes at ${tempo} BPM`);
       await this.mcpClient.sendMidiSequence(tempo, this.currentSequence.notes);
-      console.log("Sequence playback completed");
+      console.log("✅ Sequence playback completed");
 
       // Schedule next playback if still playing
       if (this.isPlaying) {
@@ -159,12 +177,13 @@ export class MusicGenerator {
         }, totalDuration);
       }
     } catch (error) {
-      console.error("Error playing sequence:", error);
+      console.error("❌ Error playing sequence:", error);
     }
   }
 
   stopPlayback(): void {
     this.isPlaying = false;
+    this.logger.logPlaybackStop();
     if (this.playbackIntervalId) {
       clearTimeout(this.playbackIntervalId);
       this.playbackIntervalId = null;
@@ -172,6 +191,11 @@ export class MusicGenerator {
   }
 
   async updateParameters(params: MusicParameters): Promise<void> {
+    if (this.currentParams) {
+      this.logger.logParameterChange(this.currentParams, params);
+    }
+    this.currentParams = params;
+    
     if (this.isPlaying) {
       await this.generateSequence(params);
     }
