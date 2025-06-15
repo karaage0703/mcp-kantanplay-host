@@ -1,13 +1,17 @@
 # MCP KantanPlay Host
 
-MCPホストを使用してローカルLLM（Gemma3:4B）でかんたんプレイという楽器を演奏し続けるシステムです。
+MCPホストを使用してローカルLLM（Ollama）でかんたんプレイという楽器を演奏し続けるシステムです。
 
 ## 機能
 
-- ローカルLLM（Ollama + Gemma3:4B）による楽曲生成
+- ローカルLLM（Ollama）による楽曲生成（Gemma3:4B等）
+- **Web UI**によるリアルタイム制御とビジュアライゼーション
 - MIDI楽器（X-Touch mini）でのリアルタイムパラメータ制御
+- **MIDI デバイス選択**（Web UI から入力・出力デバイスを動的に設定）
+- **Ollama モデル選択**（Web UI から使用するLLMモデルを切り替え）
 - MCPサーバーを使用したMIDI制御
 - かんたんプレイのMIDI Note対応
+- **ゴーストノート**（休符）対応による自然なリズム生成
 
 ## 必要な環境
 
@@ -70,8 +74,22 @@ npm start
 ### 開発モード
 
 ```bash
-npm run dev
+npm run dev           # コンソールのみ
+npm run dev:web       # Web UIあり（推奨）
+npm run dev:debug     # LLMデバッグ出力あり
+npm run dev:web:debug # Web UI + LLMデバッグ出力
 ```
+
+### Web UI
+
+`npm run dev:web` で起動すると、`http://localhost:3000` でWeb UIにアクセスできます。
+
+**Web UIの機能:**
+- リアルタイム音楽パラメータ制御
+- MIDI シーケンス可視化
+- MIDI デバイス選択（入力・出力）
+- Ollama モデル選択
+- 接続ステータス表示
 
 ## 環境変数
 
@@ -79,17 +97,20 @@ npm run dev
 - `OLLAMA_MODEL`: 使用するモデル名（デフォルト: gemma3:4b）
 - `MCP_PYTHON_SERVER_PATH`: MCP MIDIサーバーのディレクトリパス（必須）
 - `MCP_MIDI_SERVER_PATH`: カスタムランチャーのパス（デフォルト: uv）
-- `MIDI_INPUT_PORT`: MIDI入力ポート番号
-- `MIDI_OUTPUT_PORT`: MIDI出力ポート番号
+- `MIDI_INPUT_PORT`: MIDI入力ポート番号（Web UIで動的変更可能）
+- `MIDI_OUTPUT_PORT`: MIDI出力ポート番号（Web UIで動的変更可能）
+- `WEB_PORT`: Web UIのポート番号（デフォルト: 3000）
+- `WEB_HOST`: Web UIのホスト（デフォルト: localhost）
 
 ## かんたんプレイ MIDI マッピング
 
 | MIDI Note | ボタン | 説明 |
 |-----------|--------|------|
+| -1 | 🔇 | ゴーストノート（休符） |
 | 53 | dim | diminished |
 | 55 | 7 | dominant 7th |
 | 56 | sus4 | suspended 4th |
-| 57 | 〜 | glide/portamento |
+| 57 | 〜 | swap |
 | 58 | Add9 | add 9th |
 | 59 | M7 | major 7th |
 | 60 | 1 | root note |
@@ -109,8 +130,10 @@ npm run dev
 
 - Controller 1: Tempo (60-180 BPM)
 - Controller 2: Complexity (1-10)
-- Controller 3: Key (C, C#, D, etc.)
-- Controller 4: Mood (happy, sad, energetic, etc.)
+- Controller 3: Sequence Length (4-16)
+- Controller 4: Mood (happy, sad, energetic, calm, mysterious, dramatic)
+
+**注意:** MIDIデバイスの選択はWeb UIから動的に変更できます。
 
 ## ライセンス
 
