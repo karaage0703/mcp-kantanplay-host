@@ -26,6 +26,7 @@ class KantanPlayHost {
 
     this.mcpIntegration = new MCPServerIntegration({
       serverPath: config.mcpServerPath,
+      pythonServerPath: process.env.MCP_PYTHON_SERVER_PATH,
     });
 
     this.musicGenerator = new MusicGenerator(this.ollamaClient, this.mcpIntegration.getClient());

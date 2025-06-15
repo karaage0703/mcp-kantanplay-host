@@ -23,22 +23,35 @@ MCPホストを使用してローカルLLM（Gemma3:4B）でかんたんプレ�
 npm install
 ```
 
-### 2. DockerでOllamaを起動
+### 2. 環境設定
+
+`.env.example`を`.env`にコピーして、MCP MIDIサーバーのパスを設定します：
+
+```bash
+cp .env.example .env
+```
+
+`.env`ファイルを編集：
+```env
+# MCP MIDIサーバーのディレクトリパス（必須）
+MCP_PYTHON_SERVER_PATH=/path/to/your/mcp-midi-server
+```
+
+### 3. DockerでOllamaを起動
 
 ```bash
 docker run -d -v ollama:/root/.ollama -p 11434:11434 --name ollama ollama/ollama
 ```
 
-### 3. Gemma3:4Bモデルをダウンロード
+### 4. Gemma3:4Bモデルをダウンロード
 
 ```bash
 docker exec -it ollama ollama pull gemma3:4b
 ```
 
-### 4. MCP MIDI Serverの準備
+### 5. MCP MIDI Serverの準備
 
-MCP MIDI Serverは `/Users/karaage/GitHub/mcp-midi-server` にあるものを使用します。
-uvで実行されるように設定済みです。
+[MCP MIDI Server](https://github.com/necobit/mcp-midi-server)をクローンして準備してください。
 
 ## 使用方法
 
@@ -64,7 +77,8 @@ npm run dev
 
 - `OLLAMA_URL`: OllamaサーバーのURL（デフォルト: http://localhost:11434）
 - `OLLAMA_MODEL`: 使用するモデル名（デフォルト: gemma3:4b）
-- `MCP_MIDI_SERVER_PATH`: MCP MIDIサーバーのパス（デフォルト: uv）
+- `MCP_PYTHON_SERVER_PATH`: MCP MIDIサーバーのディレクトリパス（必須）
+- `MCP_MIDI_SERVER_PATH`: カスタムランチャーのパス（デフォルト: uv）
 - `MIDI_INPUT_PORT`: MIDI入力ポート番号
 - `MIDI_OUTPUT_PORT`: MIDI出力ポート番号
 

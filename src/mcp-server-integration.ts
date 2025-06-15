@@ -3,15 +3,26 @@ import { MCPClient } from "./mcp-client";
 export interface MCPServerConfig {
   serverPath: string;
   serverArgs?: string[];
+  pythonServerPath?: string;
 }
 
 export class MCPServerIntegration {
   private mcpClient: MCPClient;
   private isConnected: boolean = false;
 
-  constructor(_config: MCPServerConfig) {
-    const scriptPath = "/Users/karaage/GitHub/mcp-kantanplay-host/start-mcp-server.sh";
-    this.mcpClient = new MCPClient(scriptPath, []);
+  constructor(config: MCPServerConfig) {
+    // If pythonServerPath is provided, run the Python server directly
+    if (config.pythonServerPath) {
+      this.mcpClient = new MCPClient(
+        "uv",
+        ["run", "python", "kantanplay-midi-server.py"],
+        config.pythonServerPath,
+      );
+    } else {
+      // Otherwise, use the shell script approach
+      const scriptPath = "/Users/karaage/GitHub/mcp-kantanplay-host/start-mcp-server.sh";
+      this.mcpClient = new MCPClient(scriptPath, [], config.serverPath);
+    }
   }
 
   async initialize(): Promise<void> {
