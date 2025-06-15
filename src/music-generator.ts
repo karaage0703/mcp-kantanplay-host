@@ -1,6 +1,6 @@
-import { OllamaClient, MusicParameters } from './ollama-client';
-import { MCPClient } from './mcp-client';
-import { isValidKantanPlayNote, MUSICAL_SCALES } from './kantanplay-mapping';
+import { OllamaClient, MusicParameters } from "./ollama-client";
+import { MCPClient } from "./mcp-client";
+import { isValidKantanPlayNote, MUSICAL_SCALES } from "./kantanplay-mapping";
 
 export interface MusicSequence {
   notes: number[];
@@ -22,11 +22,11 @@ export class MusicGenerator {
 
   async generateSequence(params: MusicParameters): Promise<MusicSequence> {
     try {
-      console.log('Generating music sequence with params:', params);
+      console.log("Generating music sequence with params:", params);
       const notes = await this.ollamaClient.generateMusicSequence(params);
-      console.log('Generated notes:', notes);
+      console.log("Generated notes:", notes);
       const validNotes = notes.filter(isValidKantanPlayNote);
-      
+
       if (validNotes.length === 0) {
         validNotes.push(...this.getFallbackSequence(params));
       }
@@ -37,12 +37,12 @@ export class MusicGenerator {
       this.currentSequence = {
         notes: validNotes,
         durations,
-        velocities
+        velocities,
       };
 
       return this.currentSequence;
     } catch (error) {
-      console.error('Error generating music sequence:', error);
+      console.error("Error generating music sequence:", error);
       return this.getFallbackMusicSequence(params);
     }
   }
@@ -71,16 +71,28 @@ export class MusicGenerator {
   private getScaleForKey(key: string): number[] {
     const baseScale = MUSICAL_SCALES.MAJOR;
     const keyOffset = this.getKeyOffset(key);
-    return baseScale.map(note => {
-      const transposed = note + keyOffset;
-      return transposed >= 53 && transposed <= 71 ? transposed : note;
-    }).filter(note => note >= 53 && note <= 71);
+    return baseScale
+      .map((note) => {
+        const transposed = note + keyOffset;
+        return transposed >= 53 && transposed <= 71 ? transposed : note;
+      })
+      .filter((note) => note >= 53 && note <= 71);
   }
 
   private getKeyOffset(key: string): number {
     const keyMap: { [key: string]: number } = {
-      'C': 0, 'C#': 1, 'D': 2, 'D#': 3, 'E': 4, 'F': 5,
-      'F#': 6, 'G': 7, 'G#': 8, 'A': 9, 'A#': 10, 'B': 11
+      C: 0,
+      "C#": 1,
+      D: 2,
+      "D#": 3,
+      E: 4,
+      F: 5,
+      "F#": 6,
+      G: 7,
+      "G#": 8,
+      A: 9,
+      "A#": 10,
+      B: 11,
     };
     return keyMap[key] || 0;
   }
@@ -88,12 +100,12 @@ export class MusicGenerator {
   private generateDurations(length: number, tempo: number): number[] {
     const baseDuration = 60000 / tempo;
     const durations: number[] = [];
-    
+
     for (let i = 0; i < length; i++) {
       const variation = Math.random() * 0.5 + 0.75;
       durations.push(Math.round(baseDuration * variation));
     }
-    
+
     return durations;
   }
 
@@ -101,53 +113,57 @@ export class MusicGenerator {
     const baseVelocity = 80;
     const maxVariation = complexity * 5;
     const velocities: number[] = [];
-    
+
     for (let i = 0; i < length; i++) {
       const variation = (Math.random() - 0.5) * maxVariation;
       const velocity = Math.max(40, Math.min(127, baseVelocity + variation));
       velocities.push(Math.round(velocity));
     }
-    
+
     return velocities;
   }
 
   async startPlayback(params: MusicParameters): Promise<void> {
     if (this.isPlaying) {
-      await this.stopPlayback();
+      this.stopPlayback();
     }
 
     this.isPlaying = true;
     await this.generateSequence(params);
-    
+
     if (!this.currentSequence) {
-      console.error('No sequence generated');
+      console.error("No sequence generated");
       return;
     }
 
-    this.playSequence();
+    void this.playSequence();
   }
 
   private async playSequence(): Promise<void> {
     if (!this.currentSequence || !this.isPlaying) return;
 
     const tempo = 120; // Default BPM, could be made configurable
-    
+
     try {
-      console.log(`Playing sequence with ${this.currentSequence.notes.length} notes at ${tempo} BPM`);
+      console.log(
+        `Playing sequence with ${this.currentSequence.notes.length} notes at ${tempo} BPM`,
+      );
       await this.mcpClient.sendMidiSequence(tempo, this.currentSequence.notes);
-      console.log('Sequence playback completed');
-      
+      console.log("Sequence playback completed");
+
       // Schedule next playback if still playing
       if (this.isPlaying) {
         const totalDuration = this.currentSequence.notes.length * (60000 / tempo) * 2; // Approximate duration
-        this.playbackIntervalId = setTimeout(() => this.playSequence(), totalDuration);
+        this.playbackIntervalId = setTimeout(() => {
+          void this.playSequence();
+        }, totalDuration);
       }
     } catch (error) {
-      console.error('Error playing sequence:', error);
+      console.error("Error playing sequence:", error);
     }
   }
 
-  async stopPlayback(): Promise<void> {
+  stopPlayback(): void {
     this.isPlaying = false;
     if (this.playbackIntervalId) {
       clearTimeout(this.playbackIntervalId);

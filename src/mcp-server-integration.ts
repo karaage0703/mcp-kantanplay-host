@@ -1,4 +1,4 @@
-import { MCPClient } from './mcp-client';
+import { MCPClient } from "./mcp-client";
 
 export interface MCPServerConfig {
   serverPath: string;
@@ -10,7 +10,7 @@ export class MCPServerIntegration {
   private isConnected: boolean = false;
 
   constructor(_config: MCPServerConfig) {
-    const scriptPath = '/Users/karaage/GitHub/mcp-kantanplay-host/start-mcp-server.sh';
+    const scriptPath = "/Users/karaage/GitHub/mcp-kantanplay-host/start-mcp-server.sh";
     this.mcpClient = new MCPClient(scriptPath, []);
   }
 
@@ -18,22 +18,22 @@ export class MCPServerIntegration {
     try {
       await this.mcpClient.connect();
       this.isConnected = true;
-      console.log('Connected to MCP MIDI server');
+      console.log("Connected to MCP MIDI server");
 
-      const tools = await this.mcpClient.listTools();
-      console.log('Available tools:', tools);
+      const tools = (await this.mcpClient.listTools()) as { name: string; description?: string }[];
+      console.log("Available tools:", tools);
 
       // MIDIポートを開く
       try {
-        const openPortResult = await this.mcpClient.callTool('open_midi_port', {
-          port_index: 0
-        });
-        console.log('MIDI port opened:', openPortResult);
+        const openPortResult = (await this.mcpClient.callTool("open_midi_port", {
+          port_index: 0,
+        })) as { success: boolean; message?: string };
+        console.log("MIDI port opened:", openPortResult);
       } catch (error) {
-        console.error('Failed to open MIDI port:', error);
+        console.error("Failed to open MIDI port:", error);
       }
     } catch (error) {
-      console.error('Failed to connect to MCP server:', error);
+      console.error("Failed to connect to MCP server:", error);
       throw error;
     }
   }
@@ -42,13 +42,13 @@ export class MCPServerIntegration {
     if (this.isConnected) {
       await this.mcpClient.disconnect();
       this.isConnected = false;
-      console.log('Disconnected from MCP MIDI server');
+      console.log("Disconnected from MCP MIDI server");
     }
   }
 
   async sendNote(note: number, velocity: number = 127, duration: number = 500): Promise<void> {
     if (!this.isConnected) {
-      throw new Error('MCP client is not connected');
+      throw new Error("MCP client is not connected");
     }
 
     try {
@@ -61,7 +61,7 @@ export class MCPServerIntegration {
 
   async sendControlChange(controller: number, value: number): Promise<void> {
     if (!this.isConnected) {
-      throw new Error('MCP client is not connected');
+      throw new Error("MCP client is not connected");
     }
 
     try {
@@ -81,7 +81,7 @@ export class MCPServerIntegration {
       await this.mcpClient.listTools();
       return true;
     } catch (error) {
-      console.error('MCP connection test failed:', error);
+      console.error("MCP connection test failed:", error);
       this.isConnected = false;
       return false;
     }

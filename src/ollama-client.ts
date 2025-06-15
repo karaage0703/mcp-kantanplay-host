@@ -1,4 +1,4 @@
-import axios from 'axios';
+import axios from "axios";
 
 export interface OllamaResponse {
   model: string;
@@ -17,26 +17,31 @@ export class OllamaClient {
   private baseUrl: string;
   private model: string;
 
-  constructor(baseUrl: string = 'http://localhost:11434', model: string = 'gemma3:4b') {
+  constructor(baseUrl: string = "http://localhost:11434", model: string = "gemma3:4b") {
     this.baseUrl = baseUrl;
     this.model = model;
   }
 
   async generate(prompt: string): Promise<string> {
     try {
-      console.log('Calling Ollama API with model:', this.model);
-      const response = await axios.post(`${this.baseUrl}/api/generate`, {
-        model: this.model,
-        prompt,
-        stream: false
-      }, {
-        timeout: 30000 // 30秒のタイムアウト
-      });
-      
-      console.log('Ollama response received');
-      return response.data.response;
+      console.log("Calling Ollama API with model:", this.model);
+      const response = await axios.post(
+        `${this.baseUrl}/api/generate`,
+        {
+          model: this.model,
+          prompt,
+          stream: false,
+        },
+        {
+          timeout: 30000, // 30秒のタイムアウト
+        },
+      );
+
+      console.log("Ollama response received");
+      const data = response.data as OllamaResponse;
+      return data.response;
     } catch (error) {
-      console.error('Ollama API error:', error);
+      console.error("Ollama API error:", error);
       throw error;
     }
   }
@@ -75,18 +80,18 @@ Example: 60,64,67,60,62,69,67,60`;
 
     try {
       const response = await this.generate(prompt);
-      const noteStrings = response.trim().split(',');
+      const noteStrings = response.trim().split(",");
       const notes = noteStrings
-        .map(s => parseInt(s.trim()))
-        .filter(n => !isNaN(n) && n >= 53 && n <= 71);
-      
+        .map((s) => parseInt(s.trim()))
+        .filter((n) => !isNaN(n) && n >= 53 && n <= 71);
+
       if (notes.length === 0) {
         return [60, 64, 67, 60];
       }
-      
+
       return notes;
     } catch (error) {
-      console.error('Error generating music sequence:', error);
+      console.error("Error generating music sequence:", error);
       return [60, 64, 67, 60];
     }
   }

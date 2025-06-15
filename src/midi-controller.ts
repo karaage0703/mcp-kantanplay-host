@@ -1,5 +1,5 @@
-import * as midi from 'midi';
-import { MusicParameters } from './ollama-client';
+import * as midi from "midi";
+import { MusicParameters } from "./ollama-client";
 
 export interface MidiControllerMapping {
   controller: number;
@@ -9,8 +9,8 @@ export interface MidiControllerMapping {
 }
 
 export const XTOUCH_MINI_MAPPING: MidiControllerMapping[] = [
-  { controller: 1, parameter: 'tempo', min: 60, max: 180 },
-  { controller: 2, parameter: 'complexity', min: 1, max: 10 },
+  { controller: 1, parameter: "tempo", min: 60, max: 180 },
+  { controller: 2, parameter: "complexity", min: 1, max: 10 },
 ];
 
 export class MidiController {
@@ -24,9 +24,9 @@ export class MidiController {
     this.output = new midi.Output();
     this.parameters = {
       tempo: 120,
-      key: 'C',
-      mood: 'happy',
-      complexity: 5
+      key: "C",
+      mood: "happy",
+      complexity: 5,
     };
   }
 
@@ -50,7 +50,7 @@ export class MidiController {
 
   openInputPort(portIndex: number): void {
     this.input.openPort(portIndex);
-    this.input.on('message', (_deltaTime: number, message: number[]) => {
+    this.input.on("message", (_deltaTime: number, message: number[]) => {
       this.handleMidiMessage(message);
     });
   }
@@ -61,31 +61,31 @@ export class MidiController {
 
   private handleMidiMessage(message: number[]): void {
     const [status, controller, value] = message;
-    
-    if ((status & 0xF0) === 0xB0) {
-      const mapping = XTOUCH_MINI_MAPPING.find(m => m.controller === controller);
+
+    if ((status & 0xf0) === 0xb0) {
+      const mapping = XTOUCH_MINI_MAPPING.find((m) => m.controller === controller);
       if (mapping) {
         const normalizedValue = value / 127;
-        const scaledValue = mapping.min + (normalizedValue * (mapping.max - mapping.min));
-        
-        if (mapping.parameter === 'tempo' || mapping.parameter === 'complexity') {
+        const scaledValue = mapping.min + normalizedValue * (mapping.max - mapping.min);
+
+        if (mapping.parameter === "tempo" || mapping.parameter === "complexity") {
           this.parameters[mapping.parameter] = Math.round(scaledValue);
         }
-        
+
         if (controller === 3) {
-          const keys = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+          const keys = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
           const keyIndex = Math.floor((value / 127) * keys.length);
           this.parameters.key = keys[Math.min(keyIndex, keys.length - 1)];
         }
-        
+
         if (controller === 4) {
-          const moods = ['happy', 'sad', 'energetic', 'calm', 'mysterious', 'dramatic'];
+          const moods = ["happy", "sad", "energetic", "calm", "mysterious", "dramatic"];
           const moodIndex = Math.floor((value / 127) * moods.length);
           this.parameters.mood = moods[Math.min(moodIndex, moods.length - 1)];
         }
 
-        console.log('Parameter updated:', mapping.parameter, this.parameters[mapping.parameter]);
-        
+        console.log("Parameter updated:", mapping.parameter, this.parameters[mapping.parameter]);
+
         if (this.onParameterChange) {
           this.onParameterChange({ ...this.parameters });
         }

@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 
-import { OllamaClient } from './ollama-client';
-import { MidiController } from './midi-controller';
-import { MusicGenerator } from './music-generator';
-import { MCPServerIntegration } from './mcp-server-integration';
+import { OllamaClient } from "./ollama-client";
+import { MidiController } from "./midi-controller";
+import { MusicGenerator } from "./music-generator";
+import { MCPServerIntegration } from "./mcp-server-integration";
 
 interface AppConfig {
   ollamaUrl: string;
@@ -25,13 +25,10 @@ class KantanPlayHost {
     this.midiController = new MidiController();
 
     this.mcpIntegration = new MCPServerIntegration({
-      serverPath: config.mcpServerPath
+      serverPath: config.mcpServerPath,
     });
 
-    this.musicGenerator = new MusicGenerator(
-      this.ollamaClient,
-      this.mcpIntegration.getClient()
-    );
+    this.musicGenerator = new MusicGenerator(this.ollamaClient, this.mcpIntegration.getClient());
 
     this.setupMidiController(config.midiInputPort, config.midiOutputPort);
   }
@@ -40,12 +37,12 @@ class KantanPlayHost {
     const inputPorts = this.midiController.listInputPorts();
     const outputPorts = this.midiController.listOutputPorts();
 
-    console.log('Available MIDI input ports:');
+    console.log("Available MIDI input ports:");
     inputPorts.forEach((port, index) => {
       console.log(`  ${index}: ${port}`);
     });
 
-    console.log('Available MIDI output ports:');
+    console.log("Available MIDI output ports:");
     outputPorts.forEach((port, index) => {
       console.log(`  ${index}: ${port}`);
     });
@@ -67,46 +64,46 @@ class KantanPlayHost {
     }
 
     this.midiController.setParameterChangeCallback((params) => {
-      console.log('Music parameters updated:', params);
-      this.musicGenerator.updateParameters(params);
+      console.log("Music parameters updated:", params);
+      void this.musicGenerator.updateParameters(params);
     });
   }
 
   async initialize(): Promise<void> {
-    console.log('Initializing KantanPlay Host...');
+    console.log("Initializing KantanPlay Host...");
 
-    console.log('Checking Ollama connection...');
+    console.log("Checking Ollama connection...");
     const ollamaHealthy = await this.ollamaClient.isHealthy();
     if (!ollamaHealthy) {
-      throw new Error('Ollama server is not accessible. Please ensure Docker Ollama is running.');
+      throw new Error("Ollama server is not accessible. Please ensure Docker Ollama is running.");
     }
-    console.log('Ollama connection OK');
+    console.log("Ollama connection OK");
 
-    console.log('Connecting to MCP MIDI server...');
+    console.log("Connecting to MCP MIDI server...");
     await this.mcpIntegration.initialize();
 
-    console.log('KantanPlay Host initialized successfully!');
+    console.log("KantanPlay Host initialized successfully!");
   }
 
   async start(): Promise<void> {
     if (this.isRunning) {
-      console.log('KantanPlay Host is already running');
+      console.log("KantanPlay Host is already running");
       return;
     }
 
     this.isRunning = true;
-    console.log('Starting KantanPlay Host...');
+    console.log("Starting KantanPlay Host...");
 
     const initialParams = this.midiController.getParameters();
     await this.musicGenerator.startPlayback(initialParams);
 
-    console.log('KantanPlay Host is now running!');
-    console.log('Use your MIDI controller to adjust parameters:');
-    console.log('  - Controller 1: Tempo (60-180 BPM)');
-    console.log('  - Controller 2: Complexity (1-10)');
-    console.log('  - Controller 3: Key (C, C#, D, etc.)');
-    console.log('  - Controller 4: Mood (happy, sad, energetic, etc.)');
-    console.log('Press Ctrl+C to stop');
+    console.log("KantanPlay Host is now running!");
+    console.log("Use your MIDI controller to adjust parameters:");
+    console.log("  - Controller 1: Tempo (60-180 BPM)");
+    console.log("  - Controller 2: Complexity (1-10)");
+    console.log("  - Controller 3: Key (C, C#, D, etc.)");
+    console.log("  - Controller 4: Mood (happy, sad, energetic, etc.)");
+    console.log("Press Ctrl+C to stop");
   }
 
   async stop(): Promise<void> {
@@ -114,24 +111,26 @@ class KantanPlayHost {
       return;
     }
 
-    console.log('Stopping KantanPlay Host...');
+    console.log("Stopping KantanPlay Host...");
     this.isRunning = false;
 
-    await this.musicGenerator.stopPlayback();
+    this.musicGenerator.stopPlayback();
     await this.mcpIntegration.disconnect();
     this.midiController.close();
 
-    console.log('KantanPlay Host stopped');
+    console.log("KantanPlay Host stopped");
   }
 }
 
 async function main(): Promise<void> {
   const config: AppConfig = {
-    ollamaUrl: process.env.OLLAMA_URL || 'http://localhost:11434',
-    ollamaModel: process.env.OLLAMA_MODEL || 'gemma3:4b',
-    mcpServerPath: process.env.MCP_MIDI_SERVER_PATH || 'uv',
+    ollamaUrl: process.env.OLLAMA_URL || "http://localhost:11434",
+    ollamaModel: process.env.OLLAMA_MODEL || "gemma3:4b",
+    mcpServerPath: process.env.MCP_MIDI_SERVER_PATH || "uv",
     midiInputPort: process.env.MIDI_INPUT_PORT ? parseInt(process.env.MIDI_INPUT_PORT) : undefined,
-    midiOutputPort: process.env.MIDI_OUTPUT_PORT ? parseInt(process.env.MIDI_OUTPUT_PORT) : undefined
+    midiOutputPort: process.env.MIDI_OUTPUT_PORT
+      ? parseInt(process.env.MIDI_OUTPUT_PORT)
+      : undefined,
   };
 
   const app = new KantanPlayHost(config);
@@ -142,8 +141,12 @@ async function main(): Promise<void> {
     process.exit(0);
   };
 
-  process.on('SIGINT', () => handleShutdown('SIGINT'));
-  process.on('SIGTERM', () => handleShutdown('SIGTERM'));
+  process.on("SIGINT", () => {
+    void handleShutdown("SIGINT");
+  });
+  process.on("SIGTERM", () => {
+    void handleShutdown("SIGTERM");
+  });
 
   try {
     await app.initialize();
@@ -151,7 +154,7 @@ async function main(): Promise<void> {
 
     process.stdin.resume();
   } catch (error) {
-    console.error('Failed to start KantanPlay Host:', error);
+    console.error("Failed to start KantanPlay Host:", error);
     process.exit(1);
   }
 }

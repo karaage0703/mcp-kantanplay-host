@@ -1,5 +1,5 @@
-import { Client } from '@modelcontextprotocol/sdk/client/index.js';
-import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
+import { Client } from "@modelcontextprotocol/sdk/client/index.js";
+import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 
 export class MCPClient {
   private client: Client;
@@ -9,18 +9,18 @@ export class MCPClient {
     this.transport = new StdioClientTransport({
       command: serverCommand,
       args: serverArgs,
-      ...(cwd && { cwd })
+      ...(cwd && { cwd }),
     });
     this.client = new Client(
       {
-        name: 'kantanplay-host',
-        version: '1.0.0'
+        name: "kantanplay-host",
+        version: "1.0.0",
       },
       {
         capabilities: {
-          tools: {}
-        }
-      }
+          tools: {},
+        },
+      },
     );
   }
 
@@ -32,34 +32,38 @@ export class MCPClient {
     await this.client.close();
   }
 
-  async listTools(): Promise<any> {
+  async listTools(): Promise<unknown> {
     return await this.client.listTools();
   }
 
-  async callTool(name: string, arguments_: any): Promise<any> {
+  async callTool(name: string, arguments_: Record<string, unknown>): Promise<unknown> {
     return await this.client.callTool({
       name,
-      arguments: arguments_
+      arguments: arguments_,
     });
   }
 
-  async sendMidiNote(note: number, velocity: number = 127, duration: number = 500): Promise<any> {
-    return await this.callTool('send_midi_note', {
-      note_number: note
+  async sendMidiNote(
+    note: number,
+    _velocity: number = 127,
+    _duration: number = 500,
+  ): Promise<unknown> {
+    return await this.callTool("send_midi_note", {
+      note_number: note,
     });
   }
 
-  async sendMidiCC(controller: number, value: number): Promise<any> {
-    return await this.callTool('send_midi_cc', {
+  async sendMidiCC(controller: number, value: number): Promise<unknown> {
+    return await this.callTool("send_midi_cc", {
       controller,
-      value
+      value,
     });
   }
 
-  async sendMidiSequence(bpm: number, notes: number[]): Promise<any> {
-    return await this.callTool('send_midi_sequence', {
+  async sendMidiSequence(bpm: number, notes: number[]): Promise<unknown> {
+    return await this.callTool("send_midi_sequence", {
       bpm,
-      notes
+      notes,
     });
   }
 }
