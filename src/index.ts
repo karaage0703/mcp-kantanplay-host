@@ -6,6 +6,8 @@ import { MusicGenerator } from "./music-generator";
 import { MCPServerIntegration } from "./mcp-server-integration";
 import { MusicVisualizer } from "./visualization";
 import { MusicLogger } from "./logger";
+import { WebServer, WebServerConfig } from "./web-server";
+import { MusicParameters } from "./ollama-client";
 
 interface AppConfig {
   ollamaUrl: string;
@@ -13,6 +15,7 @@ interface AppConfig {
   mcpServerPath: string;
   midiInputPort?: number;
   midiOutputPort?: number;
+  webServerConfig?: WebServerConfig;
 }
 
 class KantanPlayHost {
@@ -20,6 +23,7 @@ class KantanPlayHost {
   private midiController: MidiController;
   private musicGenerator: MusicGenerator;
   private mcpIntegration: MCPServerIntegration;
+  private webServer?: WebServer;
   private isRunning: boolean = false;
 
   constructor(config: AppConfig) {
@@ -31,7 +35,16 @@ class KantanPlayHost {
       pythonServerPath: process.env.MCP_PYTHON_SERVER_PATH,
     });
 
-    this.musicGenerator = new MusicGenerator(this.ollamaClient, this.mcpIntegration.getClient());
+    if (config.webServerConfig) {
+      this.webServer = new WebServer(config.webServerConfig);
+      this.setupWebServerIntegration();
+    }
+
+    this.musicGenerator = new MusicGenerator(
+      this.ollamaClient,
+      this.mcpIntegration.getClient(),
+      this.webServer,
+    );
 
     this.setupMidiController(config.midiInputPort, config.midiOutputPort);
   }
@@ -53,8 +66,10 @@ class KantanPlayHost {
     // Find X-Touch Mini for input
     let xtouchIndex = -1;
     for (let i = 0; i < inputPorts.length; i++) {
-      if (inputPorts[i].toLowerCase().includes('x-touch') || 
-          inputPorts[i].toLowerCase().includes('mini')) {
+      if (
+        inputPorts[i].toLowerCase().includes("x-touch") ||
+        inputPorts[i].toLowerCase().includes("mini")
+      ) {
         xtouchIndex = i;
         break;
       }
@@ -79,6 +94,23 @@ class KantanPlayHost {
       console.log(MusicVisualizer.visualizeParameters(params));
       console.log("⚡ Regenerating music sequence...");
       void this.musicGenerator.updateParameters(params);
+
+      if (this.webServer) {
+        this.webServer.broadcastParameters(params);
+      }
+    });
+  }
+
+  private setupWebServerIntegration(): void {
+    if (!this.webServer) return;
+
+    this.webServer.on<MusicParameters>("parameter-change", (params: MusicParameters) => {
+      console.log("\n🌐 Web UI Parameter Update:");
+      console.log(MusicVisualizer.visualizeParameters(params));
+      console.log("⚡ Regenerating music sequence...");
+      void this.musicGenerator.updateParameters(params);
+
+      this.midiController.updateParameters(params);
     });
   }
 
@@ -94,6 +126,11 @@ class KantanPlayHost {
 
     console.log("Connecting to MCP MIDI server...");
     await this.mcpIntegration.initialize();
+
+    if (this.webServer) {
+      console.log("Starting web server...");
+      await this.webServer.start();
+    }
 
     console.log("KantanPlay Host initialized successfully!");
   }
@@ -116,7 +153,8 @@ class KantanPlayHost {
     console.log("│                                             │");
     console.log("│ Controller 1: Tempo (60-180 BPM)           │");
     console.log("│ Controller 2: Complexity (1-10)            │");
-    console.log("│ Controller 3: Mood                         │");
+    console.log("│ Controller 3: Sequence Length (4-16)       │");
+    console.log("│ Controller 4: Mood                         │");
     console.log("│   (happy/sad/energetic/calm/               │");
     console.log("│    mysterious/dramatic)                     │");
     console.log("│                                             │");
@@ -136,16 +174,20 @@ class KantanPlayHost {
     await this.mcpIntegration.disconnect();
     this.midiController.close();
 
+    if (this.webServer) {
+      await this.webServer.stop();
+    }
+
     // Generate and display session summary
     const logger = MusicLogger.getInstance();
     const summary = logger.generateSessionSummary();
-    
+
     console.log("\n📊 Session Summary:");
     console.log("┌─────────────────────────────────────────────┐");
     console.log(`│ Session ID: ${summary.sessionId.toString().padEnd(28)} │`);
     console.log(`│ Generations: ${summary.totalGenerations.toString().padEnd(27)} │`);
     console.log(`│ Parameter Changes: ${summary.totalParameterChanges.toString().padEnd(21)} │`);
-    console.log(`│ Log File: ${logger.getLogFile().split('/').pop()?.padEnd(29) || ''} │`);
+    console.log(`│ Log File: ${logger.getLogFile().split("/").pop()?.padEnd(29) || ""} │`);
     console.log("└─────────────────────────────────────────────┘");
 
     console.log("✅ KantanPlay Host stopped");
@@ -161,6 +203,10 @@ async function main(): Promise<void> {
     midiOutputPort: process.env.MIDI_OUTPUT_PORT
       ? parseInt(process.env.MIDI_OUTPUT_PORT)
       : undefined,
+    webServerConfig: {
+      port: parseInt(process.env.WEB_PORT || "3000"),
+      host: process.env.WEB_HOST || "localhost",
+    },
   };
 
   const app = new KantanPlayHost(config);

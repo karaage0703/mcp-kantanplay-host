@@ -3,6 +3,7 @@ import { MCPClient } from "./mcp-client";
 import { isValidKantanPlayNote, MUSICAL_SCALES } from "./kantanplay-mapping";
 import { MusicVisualizer } from "./visualization";
 import { MusicLogger } from "./logger";
+import { WebServer } from "./web-server";
 
 export interface MusicSequence {
   notes: number[];
@@ -13,15 +14,17 @@ export interface MusicSequence {
 export class MusicGenerator {
   private ollamaClient: OllamaClient;
   private mcpClient: MCPClient;
+  private webServer?: WebServer;
   private isPlaying: boolean = false;
   private currentSequence: MusicSequence | null = null;
   private playbackIntervalId: NodeJS.Timeout | null = null;
   private logger: MusicLogger;
   private currentParams: MusicParameters | null = null;
 
-  constructor(ollamaClient: OllamaClient, mcpClient: MCPClient) {
+  constructor(ollamaClient: OllamaClient, mcpClient: MCPClient, webServer?: WebServer) {
     this.ollamaClient = ollamaClient;
     this.mcpClient = mcpClient;
+    this.webServer = webServer;
     this.logger = MusicLogger.getInstance();
   }
 
@@ -29,7 +32,7 @@ export class MusicGenerator {
     try {
       console.log(MusicVisualizer.visualizeParameters(params));
       console.log("🎵 Generating music sequence...");
-      
+
       const notes = await this.ollamaClient.generateMusicSequence(params);
       const validNotes = notes.filter(isValidKantanPlayNote);
 
@@ -49,13 +52,22 @@ export class MusicGenerator {
 
       // Display the generated sequence with visualization
       console.log(MusicVisualizer.visualizeSequence(this.currentSequence, params));
-      
+
       // Log structured data for analysis
       const sessionLog = MusicVisualizer.createSessionLog(params, this.currentSequence);
       console.log(`📊 Session: ${this.logger.getSessionId()}`);
-      
+
       // Log to structured log file
-      this.logger.logGeneration(params, this.currentSequence, (sessionLog as any).analysis);
+      this.logger.logGeneration(
+        params,
+        this.currentSequence,
+        (sessionLog as { analysis: object }).analysis,
+      );
+
+      // Broadcast sequence to web UI
+      if (this.webServer) {
+        this.webServer.broadcastSequence(this.currentSequence);
+      }
 
       return this.currentSequence;
     } catch (error) {
@@ -66,7 +78,7 @@ export class MusicGenerator {
 
   private getFallbackSequence(params: MusicParameters): number[] {
     const scale = this.getScaleForKey(params.key);
-    const sequenceLength = Math.max(4, Math.min(16, params.complexity * 2));
+    const sequenceLength = params.sequenceLength || 8;
     const sequence: number[] = [];
 
     for (let i = 0; i < sequenceLength; i++) {
@@ -148,7 +160,7 @@ export class MusicGenerator {
     this.isPlaying = true;
     this.currentParams = params;
     this.logger.logPlaybackStart(params);
-    
+
     await this.generateSequence(params);
 
     if (!this.currentSequence) {
@@ -165,7 +177,9 @@ export class MusicGenerator {
     const tempo = this.currentParams.tempo;
 
     try {
-      console.log(`\n🎶 Playing sequence with ${this.currentSequence.notes.length} notes at ${tempo} BPM`);
+      console.log(
+        `\n🎶 Playing sequence with ${this.currentSequence.notes.length} notes at ${tempo} BPM`,
+      );
       await this.mcpClient.sendMidiSequence(tempo, this.currentSequence.notes);
       console.log("✅ Sequence playback completed");
 
@@ -195,7 +209,7 @@ export class MusicGenerator {
       this.logger.logParameterChange(this.currentParams, params);
     }
     this.currentParams = params;
-    
+
     if (this.isPlaying) {
       await this.generateSequence(params);
     }

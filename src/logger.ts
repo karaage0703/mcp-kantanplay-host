@@ -188,8 +188,8 @@ export class MusicLogger {
       totalGenerations: generations.length,
       totalParameterChanges: parameterChanges.length,
       averageSequenceLength:
-        generations.reduce((sum, gen) => sum + (gen.sequence?.length || 0), 0) / generations.length ||
-        0,
+        generations.reduce((sum, gen) => sum + (gen.sequence?.length || 0), 0) /
+          generations.length || 0,
       mostUsedParameters: this.analyzeMostUsedParameters(generations),
     };
   }

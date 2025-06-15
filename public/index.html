@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KantanPlay Host - Music Generation Control</title>
+    <script src="/socket.io/socket.io.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: white;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .status-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(255,255,255,0.1);
+            padding: 15px 20px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            backdrop-filter: blur(10px);
+        }
+
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .status-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #4CAF50;
+            animation: pulse 2s infinite;
+        }
+
+        .status-dot.disconnected {
+            background: #f44336;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+
+        .main-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        .panel {
+            background: rgba(255,255,255,0.1);
+            border-radius: 15px;
+            padding: 25px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .panel h2 {
+            margin-bottom: 20px;
+            font-size: 1.5em;
+            color: #FFD700;
+        }
+
+        .parameter-controls {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .control-group label {
+            font-weight: 600;
+            font-size: 1.1em;
+        }
+
+        .slider-container {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .slider {
+            flex: 1;
+            height: 8px;
+            border-radius: 4px;
+            background: rgba(255,255,255,0.3);
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        .slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #FFD700;
+            cursor: pointer;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+        }
+
+        .slider::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #FFD700;
+            cursor: pointer;
+            border: none;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+        }
+
+        .value-display {
+            min-width: 80px;
+            text-align: center;
+            font-weight: bold;
+            background: rgba(255,255,255,0.2);
+            padding: 8px 12px;
+            border-radius: 20px;
+            font-size: 1.1em;
+        }
+
+        .select-container {
+            position: relative;
+        }
+
+        .select-container select {
+            width: 100%;
+            padding: 12px 15px;
+            border: none;
+            border-radius: 8px;
+            background: rgba(255,255,255,0.2);
+            color: white;
+            font-size: 1.1em;
+            cursor: pointer;
+            outline: none;
+        }
+
+        .select-container select option {
+            background: #2a5298;
+            color: white;
+        }
+
+        .visualization-panel {
+            grid-column: span 2;
+        }
+
+        .sequence-display {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(60px, 1fr));
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .note-block {
+            background: rgba(255,215,0,0.8);
+            color: #1e3c72;
+            padding: 15px 5px;
+            border-radius: 8px;
+            text-align: center;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .note-block.active {
+            background: #FFD700;
+            transform: scale(1.1);
+            box-shadow: 0 4px 12px rgba(255,215,0,0.6);
+        }
+
+        .note-block .note-name {
+            font-size: 1.2em;
+            margin-bottom: 5px;
+        }
+
+        .note-block .note-number {
+            font-size: 0.9em;
+            opacity: 0.8;
+        }
+
+        .generation-info {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .info-card {
+            background: rgba(255,255,255,0.1);
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .info-card .label {
+            font-size: 0.9em;
+            opacity: 0.8;
+            margin-bottom: 5px;
+        }
+
+        .info-card .value {
+            font-size: 1.3em;
+            font-weight: bold;
+            color: #FFD700;
+        }
+
+        .error-message {
+            background: rgba(244, 67, 54, 0.9);
+            color: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 10px 0;
+            display: none;
+        }
+
+        .success-message {
+            background: rgba(76, 175, 80, 0.9);
+            color: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 10px 0;
+            display: none;
+        }
+
+        @media (max-width: 768px) {
+            .main-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .visualization-panel {
+                grid-column: span 1;
+            }
+            
+            .generation-info {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🎹 KantanPlay Host</h1>
+            <p>Real-time Music Generation Control</p>
+        </header>
+
+        <div class="status-bar">
+            <div class="status-indicator">
+                <div class="status-dot" id="statusDot"></div>
+                <span id="statusText">Connecting...</span>
+            </div>
+            <div id="timestamp"></div>
+        </div>
+
+        <div class="error-message" id="errorMessage"></div>
+        <div class="success-message" id="successMessage"></div>
+
+        <div class="main-grid">
+            <div class="panel">
+                <h2>🎛️ Parameters</h2>
+                <div class="parameter-controls">
+                    <div class="control-group">
+                        <label for="tempoSlider">Tempo (BPM)</label>
+                        <div class="slider-container">
+                            <input type="range" id="tempoSlider" class="slider" min="60" max="180" value="120">
+                            <div class="value-display" id="tempoValue">120</div>
+                        </div>
+                    </div>
+
+                    <div class="control-group">
+                        <label for="complexitySlider">Complexity</label>
+                        <div class="slider-container">
+                            <input type="range" id="complexitySlider" class="slider" min="1" max="10" value="5">
+                            <div class="value-display" id="complexityValue">5</div>
+                        </div>
+                    </div>
+
+                    <div class="control-group">
+                        <label for="sequenceLengthSlider">Sequence Length</label>
+                        <div class="slider-container">
+                            <input type="range" id="sequenceLengthSlider" class="slider" min="4" max="16" value="8">
+                            <div class="value-display" id="sequenceLengthValue">8</div>
+                        </div>
+                    </div>
+
+                    <div class="control-group">
+                        <label for="moodSelect">Mood</label>
+                        <div class="select-container">
+                            <select id="moodSelect">
+                                <option value="happy">Happy</option>
+                                <option value="sad">Sad</option>
+                                <option value="energetic">Energetic</option>
+                                <option value="calm">Calm</option>
+                                <option value="mysterious">Mysterious</option>
+                                <option value="dramatic">Dramatic</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="panel">
+                <h2>📊 Status</h2>
+                <div class="generation-info">
+                    <div class="info-card">
+                        <div class="label">Generations</div>
+                        <div class="value" id="generationCount">0</div>
+                    </div>
+                    <div class="info-card">
+                        <div class="label">Parameter Changes</div>
+                        <div class="value" id="parameterChanges">0</div>
+                    </div>
+                    <div class="info-card">
+                        <div class="label">Current Tempo</div>
+                        <div class="value" id="currentTempo">120</div>
+                    </div>
+                    <div class="info-card">
+                        <div class="label">Current Mood</div>
+                        <div class="value" id="currentMood">happy</div>
+                    </div>
+                    <div class="info-card">
+                        <div class="label">Sequence Length</div>
+                        <div class="value" id="currentSequenceLength">8</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="panel visualization-panel">
+            <h2>🎵 Generated Sequence</h2>
+            <div class="sequence-display" id="sequenceDisplay">
+                <div class="note-block">
+                    <div class="note-name">C4</div>
+                    <div class="note-number">60</div>
+                </div>
+                <div class="note-block">
+                    <div class="note-name">D4</div>
+                    <div class="note-number">62</div>
+                </div>
+                <div class="note-block">
+                    <div class="note-name">E4</div>
+                    <div class="note-number">64</div>
+                </div>
+                <div class="note-block">
+                    <div class="note-name">F4</div>
+                    <div class="note-number">65</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        class KantanPlayUI {
+            constructor() {
+                this.socket = io();
+                this.generationCount = 0;
+                this.parameterChanges = 0;
+                this.currentSequence = [];
+                
+                this.initializeElements();
+                this.setupSocketEvents();
+                this.setupUIEvents();
+                this.updateTimestamp();
+                
+                setInterval(() => this.updateTimestamp(), 1000);
+            }
+
+            initializeElements() {
+                this.elements = {
+                    statusDot: document.getElementById('statusDot'),
+                    statusText: document.getElementById('statusText'),
+                    timestamp: document.getElementById('timestamp'),
+                    errorMessage: document.getElementById('errorMessage'),
+                    successMessage: document.getElementById('successMessage'),
+                    
+                    tempoSlider: document.getElementById('tempoSlider'),
+                    tempoValue: document.getElementById('tempoValue'),
+                    complexitySlider: document.getElementById('complexitySlider'),
+                    complexityValue: document.getElementById('complexityValue'),
+                    sequenceLengthSlider: document.getElementById('sequenceLengthSlider'),
+                    sequenceLengthValue: document.getElementById('sequenceLengthValue'),
+                    moodSelect: document.getElementById('moodSelect'),
+                    
+                    generationCount: document.getElementById('generationCount'),
+                    parameterChanges: document.getElementById('parameterChanges'),
+                    currentTempo: document.getElementById('currentTempo'),
+                    currentMood: document.getElementById('currentMood'),
+                    currentSequenceLength: document.getElementById('currentSequenceLength'),
+                    
+                    sequenceDisplay: document.getElementById('sequenceDisplay')
+                };
+            }
+
+            setupSocketEvents() {
+                this.socket.on('connect', () => {
+                    this.updateConnectionStatus(true);
+                    this.showMessage('Connected to KantanPlay Host', 'success');
+                });
+
+                this.socket.on('disconnect', () => {
+                    this.updateConnectionStatus(false);
+                    this.showMessage('Disconnected from KantanPlay Host', 'error');
+                });
+
+                this.socket.on('parameters-update', (params) => {
+                    this.updateParametersDisplay(params);
+                });
+
+                this.socket.on('sequence-update', (sequence) => {
+                    this.updateSequenceDisplay(sequence);
+                    this.generationCount++;
+                    this.elements.generationCount.textContent = this.generationCount;
+                });
+
+                this.socket.on('status-update', (status) => {
+                    this.updateStatusDisplay(status);
+                });
+
+                this.socket.on('error', (error) => {
+                    this.showMessage(`Error: ${error.message || error}`, 'error');
+                });
+            }
+
+            setupUIEvents() {
+                this.elements.tempoSlider.addEventListener('input', (e) => {
+                    this.elements.tempoValue.textContent = e.target.value;
+                    this.sendParameterChange();
+                });
+
+                this.elements.complexitySlider.addEventListener('input', (e) => {
+                    this.elements.complexityValue.textContent = e.target.value;
+                    this.sendParameterChange();
+                });
+
+                this.elements.sequenceLengthSlider.addEventListener('input', (e) => {
+                    this.elements.sequenceLengthValue.textContent = e.target.value;
+                    this.sendParameterChange();
+                });
+
+                this.elements.moodSelect.addEventListener('change', () => {
+                    this.sendParameterChange();
+                });
+            }
+
+            sendParameterChange() {
+                const params = {
+                    tempo: parseInt(this.elements.tempoSlider.value),
+                    complexity: parseInt(this.elements.complexitySlider.value),
+                    key: "C",  // Hardware controlled
+                    mood: this.elements.moodSelect.value,
+                    sequenceLength: parseInt(this.elements.sequenceLengthSlider.value)
+                };
+
+                this.socket.emit('parameter-change', params);
+                this.parameterChanges++;
+                this.elements.parameterChanges.textContent = this.parameterChanges;
+                
+                this.elements.currentTempo.textContent = params.tempo;
+                this.elements.currentMood.textContent = params.mood;
+                this.elements.currentSequenceLength.textContent = params.sequenceLength;
+            }
+
+            updateConnectionStatus(connected) {
+                if (connected) {
+                    this.elements.statusDot.classList.remove('disconnected');
+                    this.elements.statusText.textContent = 'Connected';
+                } else {
+                    this.elements.statusDot.classList.add('disconnected');
+                    this.elements.statusText.textContent = 'Disconnected';
+                }
+            }
+
+            updateParametersDisplay(params) {
+                this.elements.tempoSlider.value = params.tempo;
+                this.elements.tempoValue.textContent = params.tempo;
+                this.elements.complexitySlider.value = params.complexity;
+                this.elements.complexityValue.textContent = params.complexity;
+                this.elements.sequenceLengthSlider.value = params.sequenceLength || 8;
+                this.elements.sequenceLengthValue.textContent = params.sequenceLength || 8;
+                this.elements.moodSelect.value = params.mood;
+                
+                this.elements.currentTempo.textContent = params.tempo;
+                this.elements.currentMood.textContent = params.mood;
+                this.elements.currentSequenceLength.textContent = params.sequenceLength;
+            }
+
+            updateSequenceDisplay(sequence) {
+                if (!sequence || !sequence.notes) return;
+
+                const noteNames = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+                
+                this.elements.sequenceDisplay.innerHTML = '';
+                
+                sequence.notes.forEach((noteNum, index) => {
+                    const noteBlock = document.createElement('div');
+                    noteBlock.className = 'note-block';
+                    
+                    const octave = Math.floor(noteNum / 12) - 1;
+                    const noteName = noteNames[noteNum % 12] + octave;
+                    
+                    noteBlock.innerHTML = `
+                        <div class="note-name">${noteName}</div>
+                        <div class="note-number">${noteNum}</div>
+                    `;
+                    
+                    this.elements.sequenceDisplay.appendChild(noteBlock);
+                    
+                    setTimeout(() => {
+                        noteBlock.classList.add('active');
+                        setTimeout(() => {
+                            noteBlock.classList.remove('active');
+                        }, 500);
+                    }, index * 200);
+                });
+            }
+
+            updateStatusDisplay(status) {
+                if (status.generationCount !== undefined) {
+                    this.generationCount = status.generationCount;
+                    this.elements.generationCount.textContent = this.generationCount;
+                }
+            }
+
+            showMessage(message, type) {
+                const element = type === 'error' ? this.elements.errorMessage : this.elements.successMessage;
+                element.textContent = message;
+                element.style.display = 'block';
+                
+                setTimeout(() => {
+                    element.style.display = 'none';
+                }, 5000);
+            }
+
+            updateTimestamp() {
+                this.elements.timestamp.textContent = new Date().toLocaleTimeString();
+            }
+        }
+
+        // Initialize the UI when the page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            new KantanPlayUI();
+        });
+    </script>
+</body>
+</html>

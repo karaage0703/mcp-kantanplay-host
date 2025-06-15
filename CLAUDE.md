@@ -7,10 +7,17 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ### Build and Development
 ```bash
 npm run build          # Compile TypeScript to JavaScript
-npm run dev           # Run with ts-node for development
+npm run dev           # Run with ts-node for development (console only)
+npm run dev:web       # Run with web UI enabled on port 3000
 npm start             # Run the compiled application
 npm run clean         # Remove dist directory
 ```
+
+### Web UI
+- Access the enhanced web interface at `http://localhost:3000` when running with `npm run dev:web`
+- Features real-time parameter controls, MIDI sequence visualization, and connection status
+- Bidirectional control: Web UI ↔ MIDI Controller synchronization
+- Configure with `WEB_PORT` and `WEB_HOST` environment variables
 
 ### Dependencies
 - Requires Docker with Ollama running locally
@@ -30,6 +37,11 @@ This is a real-time MIDI controller + LLM music generation system that integrate
 - Uses Model Context Protocol to communicate with separate Python MIDI server
 - Server process launched via `start-mcp-server.sh` script
 - Provides MIDI note/sequence/CC message sending capabilities
+
+**Web Server** (`src/web-server.ts`, `public/index.html`):
+- Express.js + Socket.io server for real-time web UI
+- Responsive design with parameter sliders, sequence visualization, and status displays
+- Real-time bidirectional communication with MIDI controller and music generation
 
 **Music Generation Pipeline**:
 - `src/ollama-client.ts`: Interfaces with local Ollama server (default: Gemma2:2b model)

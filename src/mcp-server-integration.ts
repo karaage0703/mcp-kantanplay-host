@@ -39,7 +39,7 @@ export class MCPServerIntegration {
         // まず利用可能なポートを確認
         const listResult = await this.mcpClient.callTool("list_midi_ports", {});
         console.log("Available MIDI ports:", listResult);
-        
+
         // レスポンスからテキストを抽出
         let portListText = "";
         if (typeof listResult === "object" && listResult !== null) {
@@ -48,11 +48,11 @@ export class MCPServerIntegration {
             portListText = result.content[0]?.text || "";
           }
         }
-        
+
         // UM-1のインデックスを見つける
         let um1Index = 1; // デフォルトは1
         if (portListText.includes("UM-1")) {
-          const lines = portListText.split('\n');
+          const lines = portListText.split("\n");
           for (let i = 0; i < lines.length; i++) {
             if (lines[i].includes("UM-1") && lines[i].match(/^(\d+):/)) {
               const match = lines[i].match(/^(\d+):/);
@@ -63,7 +63,7 @@ export class MCPServerIntegration {
             }
           }
         }
-        
+
         console.log(`Opening MIDI port at index ${um1Index} (UM-1)...`);
         const openPortResult = (await this.mcpClient.callTool("open_midi_port", {
           port_index: um1Index,

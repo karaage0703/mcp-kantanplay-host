@@ -16,48 +16,50 @@ export class MusicVisualizer {
   };
 
   static visualizeParameters(params: MusicParameters): string {
-    const { BRIGHT, CYAN, YELLOW, GREEN, MAGENTA, RESET } = this.COLORS;
+    const { BRIGHT, CYAN, YELLOW, MAGENTA, RESET } = this.COLORS;
     const lines: string[] = [];
-    
+
     lines.push(`${BRIGHT}♪ Music Parameters${RESET}`);
     lines.push("┌─────────────────────────────────────────────┐");
-    lines.push(`│ ${CYAN}Tempo:${RESET}       ${YELLOW}${params.tempo} BPM${RESET}`.padEnd(53) + "│");
+    lines.push(
+      `│ ${CYAN}Tempo:${RESET}       ${YELLOW}${params.tempo} BPM${RESET}`.padEnd(53) + "│",
+    );
     lines.push(`│ ${CYAN}Mood:${RESET}        ${MAGENTA}${params.mood}${RESET}`.padEnd(53) + "│");
     lines.push(`│ ${CYAN}Complexity:${RESET}  ${params.complexity}/10`.padEnd(45) + "│");
     lines.push("└─────────────────────────────────────────────┘");
-    
+
     return lines.join("\n");
   }
 
   static visualizeSequence(sequence: MusicSequence, params: MusicParameters): string {
-    const { BRIGHT, CYAN, YELLOW, GREEN, RESET, DIM } = this.COLORS;
+    const { BRIGHT, CYAN, YELLOW, RESET, DIM } = this.COLORS;
     const lines: string[] = [];
-    
+
     lines.push(`\n${BRIGHT}♫ Generated Sequence${RESET}`);
     lines.push("┌" + "─".repeat(this.BOX_WIDTH - 2) + "┐");
-    
+
     // Display note labels
-    const labels = sequence.notes.map(note => getKantanPlayLabel(note));
+    const labels = sequence.notes.map((note) => getKantanPlayLabel(note));
     const labelLine = this.formatSequenceLine(labels.join(" → "));
     lines.push(`│ ${CYAN}${labelLine}${RESET} │`);
-    
+
     // Display note descriptions
-    const descriptions = sequence.notes.map(note => {
+    const descriptions = sequence.notes.map((note) => {
       const desc = getKantanPlayDescription(note);
       return desc.length > 8 ? desc.substring(0, 7) + "." : desc;
     });
     const descLine = this.formatSequenceLine(descriptions.join(" "));
     lines.push(`│ ${DIM}${descLine}${RESET} │`);
-    
+
     // Display rhythm pattern
     const rhythmPattern = this.generateRhythmPattern(sequence.notes.length);
     lines.push(`│ ${YELLOW}${this.formatSequenceLine(rhythmPattern)}${RESET} │`);
-    
+
     lines.push("└" + "─".repeat(this.BOX_WIDTH - 2) + "┘");
-    
+
     // Add musical analysis
     lines.push(this.analyzeMusicTheory(sequence, params));
-    
+
     return lines.join("\n");
   }
 
@@ -70,7 +72,7 @@ export class MusicVisualizer {
       }
       return `${DIM}${label}${RESET}`;
     });
-    
+
     return `♪ Playing: ${labels.join(" ")}`;
   }
 
@@ -83,19 +85,22 @@ export class MusicVisualizer {
 
   private static generateRhythmPattern(length: number): string {
     const patterns = ["●", "○", "◐", "◑"];
-    return Array(length).fill(null).map((_, i) => patterns[i % 4]).join(" ");
+    return Array(length)
+      .fill(null)
+      .map((_, i) => patterns[i % 4])
+      .join(" ");
   }
 
-  private static analyzeMusicTheory(sequence: MusicSequence, params: MusicParameters): string {
+  private static analyzeMusicTheory(sequence: MusicSequence, _params: MusicParameters): string {
     const { BRIGHT, BLUE, RESET, DIM } = this.COLORS;
     const lines: string[] = [];
-    
+
     lines.push(`\n${BRIGHT}🎼 Musical Analysis${RESET}`);
-    
+
     // Analyze intervals
     const intervals: string[] = [];
     for (let i = 1; i < sequence.notes.length; i++) {
-      const interval = Math.abs(sequence.notes[i] - sequence.notes[i-1]);
+      const interval = Math.abs(sequence.notes[i] - sequence.notes[i - 1]);
       if (interval === 0) intervals.push("unison");
       else if (interval === 1) intervals.push("m2");
       else if (interval === 2) intervals.push("M2");
@@ -104,25 +109,27 @@ export class MusicVisualizer {
       else if (interval === 5) intervals.push("P4");
       else if (interval === 7) intervals.push("P5");
     }
-    
+
     if (intervals.length > 0) {
-      lines.push(`${BLUE}Intervals:${RESET} ${DIM}${intervals.slice(0, 8).join(", ")}${intervals.length > 8 ? "..." : ""}${RESET}`);
+      lines.push(
+        `${BLUE}Intervals:${RESET} ${DIM}${intervals.slice(0, 8).join(", ")}${intervals.length > 8 ? "..." : ""}${RESET}`,
+      );
     }
-    
+
     // Analyze note frequency
     const noteFrequency = new Map<number, number>();
-    sequence.notes.forEach(note => {
+    sequence.notes.forEach((note) => {
       noteFrequency.set(note, (noteFrequency.get(note) || 0) + 1);
     });
-    
+
     const mostFrequent = Array.from(noteFrequency.entries())
       .sort((a, b) => b[1] - a[1])
       .slice(0, 3)
       .map(([note, count]) => `${getKantanPlayLabel(note)} (${count}x)`)
       .join(", ");
-    
+
     lines.push(`${BLUE}Most used:${RESET} ${DIM}${mostFrequent}${RESET}`);
-    
+
     return lines.join("\n");
   }
 
@@ -137,8 +144,8 @@ export class MusicVisualizer {
       parameters: params,
       sequence: {
         notes: sequence.notes,
-        labels: sequence.notes.map(note => getKantanPlayLabel(note)),
-        descriptions: sequence.notes.map(note => getKantanPlayDescription(note)),
+        labels: sequence.notes.map((note) => getKantanPlayLabel(note)),
+        descriptions: sequence.notes.map((note) => getKantanPlayDescription(note)),
         length: sequence.notes.length,
       },
       analysis: {
@@ -146,7 +153,8 @@ export class MusicVisualizer {
           min: Math.min(...sequence.notes),
           max: Math.max(...sequence.notes),
         },
-        averageVelocity: sequence.velocities.reduce((a, b) => a + b, 0) / sequence.velocities.length,
+        averageVelocity:
+          sequence.velocities.reduce((a, b) => a + b, 0) / sequence.velocities.length,
         totalDuration: sequence.durations.reduce((a, b) => a + b, 0),
       },
     };

@@ -11,7 +11,8 @@ export interface MidiControllerMapping {
 export const XTOUCH_MINI_MAPPING: MidiControllerMapping[] = [
   { controller: 1, parameter: "tempo", min: 60, max: 180 },
   { controller: 2, parameter: "complexity", min: 1, max: 10 },
-  { controller: 3, parameter: "mood", min: 0, max: 5 }, // Mood selection
+  { controller: 3, parameter: "sequenceLength", min: 4, max: 16 }, // Sequence length
+  { controller: 4, parameter: "mood", min: 0, max: 5 }, // Mood selection
 ];
 
 export class MidiController {
@@ -28,6 +29,7 @@ export class MidiController {
       key: "C",
       mood: "happy",
       complexity: 5,
+      sequenceLength: 8,
     };
   }
 
@@ -69,12 +71,16 @@ export class MidiController {
         const normalizedValue = value / 127;
         const scaledValue = mapping.min + normalizedValue * (mapping.max - mapping.min);
 
-        if (mapping.parameter === "tempo" || mapping.parameter === "complexity") {
+        if (
+          mapping.parameter === "tempo" ||
+          mapping.parameter === "complexity" ||
+          mapping.parameter === "sequenceLength"
+        ) {
           this.parameters[mapping.parameter] = Math.round(scaledValue);
         }
 
-        // Controller 3: Mood selection
-        if (controller === 3 && mapping.parameter === "mood") {
+        // Controller 4: Mood selection
+        if (controller === 4 && mapping.parameter === "mood") {
           const moods = ["happy", "sad", "energetic", "calm", "mysterious", "dramatic"];
           const moodIndex = Math.floor((value / 127) * moods.length);
           this.parameters.mood = moods[Math.min(moodIndex, moods.length - 1)];
@@ -95,6 +101,11 @@ export class MidiController {
 
   getParameters(): MusicParameters {
     return { ...this.parameters };
+  }
+
+  updateParameters(params: MusicParameters): void {
+    this.parameters = { ...params };
+    console.log("📡 Parameters updated externally:", this.parameters);
   }
 
   close(): void {
