@@ -46,10 +46,11 @@ class KantanPlayHost {
       this.webServer,
     );
 
-    // Set MCP client and MIDI controller references for web server
+    // Set MCP client, MIDI controller, and Ollama client references for web server
     if (this.webServer) {
       this.webServer.setMcpClient(this.mcpIntegration.getClient());
       this.webServer.setMidiController(this.midiController);
+      this.webServer.setOllamaClient(this.ollamaClient);
     }
 
     this.setupMidiController(config.midiInputPort, config.midiOutputPort);

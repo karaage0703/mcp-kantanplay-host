@@ -18,6 +18,7 @@ export class WebServer {
   private host: string;
   private mcpClient?: any;
   private midiController?: any;
+  private ollamaClient?: any;
 
   constructor(config: WebServerConfig) {
     this.port = config.port;
@@ -113,6 +114,32 @@ export class WebServer {
           }
         }
       });
+
+      socket.on("get-ollama-models", async () => {
+        if (this.ollamaClient) {
+          try {
+            const models = await this.ollamaClient.listModels();
+            const currentModel = this.ollamaClient.getCurrentModel();
+            socket.emit("ollama-models", { models, currentModel });
+          } catch (error) {
+            console.error("Failed to get Ollama models:", error);
+            socket.emit("error", "Failed to get Ollama models");
+          }
+        }
+      });
+
+      socket.on("set-ollama-model", (data: { modelName: string }) => {
+        if (this.ollamaClient) {
+          try {
+            this.ollamaClient.setModel(data.modelName);
+            this.io.emit("ollama-status", { currentModel: data.modelName });
+            console.log(`🤖 Ollama model set to: ${data.modelName}`);
+          } catch (error) {
+            console.error("Failed to set Ollama model:", error);
+            socket.emit("error", "Failed to set Ollama model");
+          }
+        }
+      });
     });
   }
 
@@ -166,6 +193,10 @@ export class WebServer {
 
   public setMidiController(midiController: any): void {
     this.midiController = midiController;
+  }
+
+  public setOllamaClient(ollamaClient: any): void {
+    this.ollamaClient = ollamaClient;
   }
 
   public broadcastMidiDevices(devices: unknown): void {

@@ -17,10 +17,12 @@ export interface MusicParameters {
 export class OllamaClient {
   private baseUrl: string;
   private model: string;
+  private modelName: string;
 
   constructor(baseUrl: string = "http://localhost:11434", model: string = "gemma3:4b") {
     this.baseUrl = baseUrl;
     this.model = model;
+    this.modelName = model;
   }
 
   async generate(prompt: string): Promise<string> {
@@ -122,6 +124,27 @@ Output only numbers:`;
     return sequence;
   }
 
+
+  async listModels(): Promise<string[]> {
+    try {
+      const response = await axios.get(`${this.baseUrl}/api/tags`);
+      const models = response.data.models || [];
+      return models.map((model: any) => model.name);
+    } catch (error) {
+      console.error("Failed to list Ollama models:", error);
+      return [];
+    }
+  }
+
+  setModel(modelName: string): void {
+    this.model = modelName;
+    this.modelName = modelName;
+    console.log(`🤖 Ollama model changed to: ${modelName}`);
+  }
+
+  getCurrentModel(): string {
+    return this.modelName;
+  }
 
   async isHealthy(): Promise<boolean> {
     try {

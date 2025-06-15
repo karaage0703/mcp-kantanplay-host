@@ -359,6 +359,24 @@
             </div>
         </div>
 
+        <div class="main-grid">
+            <div class="panel">
+                <h2>🤖 AI Model</h2>
+                <div class="parameter-controls">
+                    <div class="control-group">
+                        <label for="ollamaModelSelect">Ollama Model</label>
+                        <div class="select-container">
+                            <select id="ollamaModelSelect">
+                                <option value="">Loading models...</option>
+                            </select>
+                        </div>
+                    </div>
+                    <button id="refreshModelsBtn" style="margin-top: 10px; padding: 10px 20px; background: rgba(255,215,0,0.8); color: #1e3c72; border: none; border-radius: 8px; cursor: pointer; font-weight: bold;">Refresh Models</button>
+                </div>
+            </div>
+
+        </div>
+
 
         <div class="panel visualization-panel">
             <h2>🎵 Generated Sequence</h2>
@@ -417,6 +435,9 @@
                     midiOutputSelect: document.getElementById('midiOutputSelect'),
                     refreshDevicesBtn: document.getElementById('refreshDevicesBtn'),
                     
+                    ollamaModelSelect: document.getElementById('ollamaModelSelect'),
+                    refreshModelsBtn: document.getElementById('refreshModelsBtn'),
+                    
                     sequenceDisplay: document.getElementById('sequenceDisplay')
                 };
             }
@@ -426,6 +447,7 @@
                     this.updateConnectionStatus(true);
                     this.showMessage('Connected to KantanPlay Host', 'success');
                     this.loadMidiDevices();
+                    this.loadOllamaModels();
                 });
 
                 this.socket.on('disconnect', () => {
@@ -449,6 +471,13 @@
                     this.updateMidiStatus(status);
                 });
 
+                this.socket.on('ollama-models', (data) => {
+                    this.updateOllamaModelsList(data);
+                });
+
+                this.socket.on('ollama-status', (status) => {
+                    this.updateOllamaStatus(status);
+                });
 
                 this.socket.on('error', (error) => {
                     this.showMessage(`Error: ${error.message || error}`, 'error');
@@ -499,6 +528,16 @@
 
                 this.elements.refreshDevicesBtn.addEventListener('click', () => {
                     this.loadMidiDevices();
+                });
+
+                this.elements.ollamaModelSelect.addEventListener('change', (e) => {
+                    if (e.target.value) {
+                        this.setOllamaModel(e.target.value);
+                    }
+                });
+
+                this.elements.refreshModelsBtn.addEventListener('click', () => {
+                    this.loadOllamaModels();
                 });
             }
 
@@ -649,6 +688,38 @@
                 }
                 if (status.inputDevice) {
                     console.log(`MIDI Input: ${status.inputDevice}`);
+                }
+            }
+
+            loadOllamaModels() {
+                this.socket.emit('get-ollama-models');
+            }
+
+            setOllamaModel(modelName) {
+                this.socket.emit('set-ollama-model', { modelName });
+                this.showMessage(`Setting AI model to: ${modelName}`, 'success');
+            }
+
+            updateOllamaModelsList(data) {
+                const select = this.elements.ollamaModelSelect;
+                select.innerHTML = '<option value="">Select model...</option>';
+                
+                if (data && data.models && Array.isArray(data.models)) {
+                    data.models.forEach(model => {
+                        const option = document.createElement('option');
+                        option.value = model;
+                        option.textContent = model;
+                        if (model === data.currentModel) {
+                            option.selected = true;
+                        }
+                        select.appendChild(option);
+                    });
+                }
+            }
+
+            updateOllamaStatus(status) {
+                if (status.currentModel) {
+                    console.log(`AI Model: ${status.currentModel}`);
                 }
             }
         }
