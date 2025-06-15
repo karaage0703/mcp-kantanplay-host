@@ -46,6 +46,12 @@ class KantanPlayHost {
       this.webServer,
     );
 
+    // Set MCP client and MIDI controller references for web server
+    if (this.webServer) {
+      this.webServer.setMcpClient(this.mcpIntegration.getClient());
+      this.webServer.setMidiController(this.midiController);
+    }
+
     this.setupMidiController(config.midiInputPort, config.midiOutputPort);
   }
 
@@ -111,6 +117,18 @@ class KantanPlayHost {
       void this.musicGenerator.updateParameters(params);
 
       this.midiController.updateParameters(params);
+    });
+
+    this.webServer.on<{deviceName: string, deviceIndex: number}>("set-midi-input", (data) => {
+      console.log(`\n🎛️ Changing MIDI input to: ${data.deviceName} (index: ${data.deviceIndex})`);
+      this.midiController.openInputPort(data.deviceIndex);
+
+      if (this.webServer) {
+        this.webServer.broadcastMidiStatus({
+          inputDevice: data.deviceName,
+          outputDevice: null // Keep current output device
+        });
+      }
     });
   }
 
@@ -222,6 +240,16 @@ async function main(): Promise<void> {
   });
   process.on("SIGTERM", () => {
     void handleShutdown("SIGTERM");
+  });
+  
+  process.on("uncaughtException", (error) => {
+    console.error("❌ Uncaught Exception:", error);
+    void handleShutdown("UNCAUGHT_EXCEPTION");
+  });
+  
+  process.on("unhandledRejection", (reason, promise) => {
+    console.error("❌ Unhandled Rejection at:", promise, "reason:", reason);
+    // Don't exit on unhandled rejection, just log it
   });
 
   try {

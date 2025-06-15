@@ -9,6 +9,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 npm run build          # Compile TypeScript to JavaScript
 npm run dev           # Run with ts-node for development (console only)
 npm run dev:web       # Run with web UI enabled on port 3000
+npm run dev:debug     # Run with LLM debug output enabled
+npm run dev:web:debug # Run with web UI and LLM debug output
 npm start             # Run the compiled application
 npm run clean         # Remove dist directory
 ```

@@ -66,4 +66,22 @@ export class MCPClient {
       notes,
     });
   }
+
+
+  async sendSimultaneousNotes(notes: number[], duration: number = 0.5): Promise<unknown> {
+    return await this.callTool("send_simultaneous_notes", {
+      notes,
+      duration,
+    });
+  }
+
+  async listMidiDevices(): Promise<unknown> {
+    return await this.callTool("list_midi_ports", {});
+  }
+
+  async setMidiOutputDevice(deviceIndex: number): Promise<unknown> {
+    return await this.callTool("open_midi_port", {
+      port_index: deviceIndex,
+    });
+  }
 }

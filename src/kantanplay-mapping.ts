@@ -8,7 +8,7 @@ export const KANTANPLAY_MAPPING: KantanPlayNote[] = [
   { midiNote: 53, label: "dim", description: "diminished" },
   { midiNote: 55, label: "7", description: "dominant 7th" },
   { midiNote: 56, label: "sus4", description: "suspended 4th" },
-  { midiNote: 57, label: "〜", description: "glide/portamento" },
+  { midiNote: 57, label: "〜", description: "swap" },
   { midiNote: 58, label: "Add9", description: "add 9th" },
   { midiNote: 59, label: "M7", description: "major 7th" },
   { midiNote: 60, label: "1", description: "root note" },
@@ -31,15 +31,17 @@ export const MIDI_NOTE_RANGE = {
 };
 
 export function isValidKantanPlayNote(midiNote: number): boolean {
-  return KANTANPLAY_MAPPING.some((mapping) => mapping.midiNote === midiNote);
+  return midiNote === -1 || KANTANPLAY_MAPPING.some((mapping) => mapping.midiNote === midiNote);
 }
 
 export function getKantanPlayLabel(midiNote: number): string {
+  if (midiNote === -1) return "🔇"; // Ghost note symbol
   const mapping = KANTANPLAY_MAPPING.find((m) => m.midiNote === midiNote);
   return mapping ? mapping.label : "unknown";
 }
 
 export function getKantanPlayDescription(midiNote: number): string {
+  if (midiNote === -1) return "ghost note/rest";
   const mapping = KANTANPLAY_MAPPING.find((m) => m.midiNote === midiNote);
   return mapping ? mapping.description : "unknown";
 }

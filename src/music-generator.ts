@@ -20,6 +20,7 @@ export class MusicGenerator {
   private playbackIntervalId: NodeJS.Timeout | null = null;
   private logger: MusicLogger;
   private currentParams: MusicParameters | null = null;
+  private recentSequences: number[][] = []; // Track recent sequences to avoid repetition
 
   constructor(ollamaClient: OllamaClient, mcpClient: MCPClient, webServer?: WebServer) {
     this.ollamaClient = ollamaClient;
@@ -33,13 +34,26 @@ export class MusicGenerator {
       console.log(MusicVisualizer.visualizeParameters(params));
       console.log("🎵 Generating music sequence...");
 
-      const notes = await this.ollamaClient.generateMusicSequence(params);
-      const validNotes = notes.filter(isValidKantanPlayNote);
+      let notes: number[] = [];
+      try {
+        notes = await this.ollamaClient.generateMusicSequence(params);
+      } catch (error) {
+        console.error("❌ LLM generation failed:", error);
+        notes = this.getFallbackSequence(params);
+      }
+
+      let validNotes = notes.filter(isValidKantanPlayNote);
+
+      // }
 
       if (validNotes.length === 0) {
         validNotes.push(...this.getFallbackSequence(params));
         console.log("⚠️  No valid notes generated, using fallback sequence");
       }
+
+      // Store this sequence for similarity checking
+      this.addToRecentSequences(validNotes);
+      console.log(`📚 Stored sequence in history. Total stored: ${this.recentSequences.length}/5`);
 
       const durations = this.generateDurations(validNotes.length, params.tempo);
       const velocities = this.generateVelocities(validNotes.length, params.complexity);
@@ -82,8 +96,15 @@ export class MusicGenerator {
     const sequence: number[] = [];
 
     for (let i = 0; i < sequenceLength; i++) {
-      const noteIndex = Math.floor(Math.random() * scale.length);
-      sequence.push(scale[noteIndex]);
+      // Add ghost notes based on complexity (lower complexity = more rests)
+      if (params.complexity <= 3 && Math.random() < 0.25) {
+        sequence.push(-1); // Ghost note
+      } else if (params.complexity <= 6 && Math.random() < 0.1) {
+        sequence.push(-1); // Fewer ghost notes for medium complexity
+      } else {
+        const noteIndex = Math.floor(Math.random() * scale.length);
+        sequence.push(scale[noteIndex]);
+      }
     }
 
     return sequence;
@@ -180,8 +201,14 @@ export class MusicGenerator {
       console.log(
         `\n🎶 Playing sequence with ${this.currentSequence.notes.length} notes at ${tempo} BPM`,
       );
-      await this.mcpClient.sendMidiSequence(tempo, this.currentSequence.notes);
-      console.log("✅ Sequence playback completed");
+
+      // Play sequence using standard MIDI sequence method
+      try {
+        await this.mcpClient.sendMidiSequence(tempo, this.currentSequence.notes);
+        console.log("✅ Sequence playback completed");
+      } catch (midiError) {
+        console.error("❌ MIDI playback failed:", midiError);
+      }
 
       // Schedule next playback if still playing
       if (this.isPlaying) {
@@ -191,7 +218,25 @@ export class MusicGenerator {
         }, totalDuration);
       }
     } catch (error) {
-      console.error("❌ Error playing sequence:", error);
+      console.error("❌ Error in playSequence:", error);
+
+      // Try to continue playing after a short delay
+      if (this.isPlaying) {
+        setTimeout(() => {
+          void this.playSequence();
+        }, 5000);
+      }
+    }
+  }
+
+
+
+  private addToRecentSequences(sequence: number[]): void {
+    this.recentSequences.push([...sequence]);
+
+    // Keep only the last 5 sequences to avoid memory growth
+    if (this.recentSequences.length > 5) {
+      this.recentSequences.shift();
     }
   }
 

@@ -336,31 +336,29 @@
             </div>
 
             <div class="panel">
-                <h2>📊 Status</h2>
-                <div class="generation-info">
-                    <div class="info-card">
-                        <div class="label">Generations</div>
-                        <div class="value" id="generationCount">0</div>
+                <h2>🎹 MIDI Devices</h2>
+                <div class="parameter-controls">
+                    <div class="control-group">
+                        <label for="midiInputSelect">Input Device (Controller)</label>
+                        <div class="select-container">
+                            <select id="midiInputSelect">
+                                <option value="">Loading devices...</option>
+                            </select>
+                        </div>
                     </div>
-                    <div class="info-card">
-                        <div class="label">Parameter Changes</div>
-                        <div class="value" id="parameterChanges">0</div>
+                    <div class="control-group">
+                        <label for="midiOutputSelect">Output Device (KantanPlay)</label>
+                        <div class="select-container">
+                            <select id="midiOutputSelect">
+                                <option value="">Loading devices...</option>
+                            </select>
+                        </div>
                     </div>
-                    <div class="info-card">
-                        <div class="label">Current Tempo</div>
-                        <div class="value" id="currentTempo">120</div>
-                    </div>
-                    <div class="info-card">
-                        <div class="label">Current Mood</div>
-                        <div class="value" id="currentMood">happy</div>
-                    </div>
-                    <div class="info-card">
-                        <div class="label">Sequence Length</div>
-                        <div class="value" id="currentSequenceLength">8</div>
-                    </div>
+                    <button id="refreshDevicesBtn" style="margin-top: 10px; padding: 10px 20px; background: rgba(255,215,0,0.8); color: #1e3c72; border: none; border-radius: 8px; cursor: pointer; font-weight: bold;">Refresh Devices</button>
                 </div>
             </div>
         </div>
+
 
         <div class="panel visualization-panel">
             <h2>🎵 Generated Sequence</h2>
@@ -389,8 +387,6 @@
         class KantanPlayUI {
             constructor() {
                 this.socket = io();
-                this.generationCount = 0;
-                this.parameterChanges = 0;
                 this.currentSequence = [];
                 
                 this.initializeElements();
@@ -417,11 +413,9 @@
                     sequenceLengthValue: document.getElementById('sequenceLengthValue'),
                     moodSelect: document.getElementById('moodSelect'),
                     
-                    generationCount: document.getElementById('generationCount'),
-                    parameterChanges: document.getElementById('parameterChanges'),
-                    currentTempo: document.getElementById('currentTempo'),
-                    currentMood: document.getElementById('currentMood'),
-                    currentSequenceLength: document.getElementById('currentSequenceLength'),
+                    midiInputSelect: document.getElementById('midiInputSelect'),
+                    midiOutputSelect: document.getElementById('midiOutputSelect'),
+                    refreshDevicesBtn: document.getElementById('refreshDevicesBtn'),
                     
                     sequenceDisplay: document.getElementById('sequenceDisplay')
                 };
@@ -431,6 +425,7 @@
                 this.socket.on('connect', () => {
                     this.updateConnectionStatus(true);
                     this.showMessage('Connected to KantanPlay Host', 'success');
+                    this.loadMidiDevices();
                 });
 
                 this.socket.on('disconnect', () => {
@@ -444,13 +439,16 @@
 
                 this.socket.on('sequence-update', (sequence) => {
                     this.updateSequenceDisplay(sequence);
-                    this.generationCount++;
-                    this.elements.generationCount.textContent = this.generationCount;
                 });
 
-                this.socket.on('status-update', (status) => {
-                    this.updateStatusDisplay(status);
+                this.socket.on('midi-devices', (devices) => {
+                    this.updateMidiDevicesList(devices);
                 });
+
+                this.socket.on('midi-status', (status) => {
+                    this.updateMidiStatus(status);
+                });
+
 
                 this.socket.on('error', (error) => {
                     this.showMessage(`Error: ${error.message || error}`, 'error');
@@ -476,6 +474,32 @@
                 this.elements.moodSelect.addEventListener('change', () => {
                     this.sendParameterChange();
                 });
+
+                this.elements.midiInputSelect.addEventListener('change', (e) => {
+                    if (e.target.value) {
+                        try {
+                            const deviceInfo = JSON.parse(e.target.value);
+                            this.setMidiInputDevice(deviceInfo);
+                        } catch (error) {
+                            console.error('Failed to parse input device info:', error);
+                        }
+                    }
+                });
+
+                this.elements.midiOutputSelect.addEventListener('change', (e) => {
+                    if (e.target.value) {
+                        try {
+                            const deviceInfo = JSON.parse(e.target.value);
+                            this.setMidiOutputDevice(deviceInfo);
+                        } catch (error) {
+                            console.error('Failed to parse output device info:', error);
+                        }
+                    }
+                });
+
+                this.elements.refreshDevicesBtn.addEventListener('click', () => {
+                    this.loadMidiDevices();
+                });
             }
 
             sendParameterChange() {
@@ -488,12 +512,6 @@
                 };
 
                 this.socket.emit('parameter-change', params);
-                this.parameterChanges++;
-                this.elements.parameterChanges.textContent = this.parameterChanges;
-                
-                this.elements.currentTempo.textContent = params.tempo;
-                this.elements.currentMood.textContent = params.mood;
-                this.elements.currentSequenceLength.textContent = params.sequenceLength;
             }
 
             updateConnectionStatus(connected) {
@@ -514,10 +532,6 @@
                 this.elements.sequenceLengthSlider.value = params.sequenceLength || 8;
                 this.elements.sequenceLengthValue.textContent = params.sequenceLength || 8;
                 this.elements.moodSelect.value = params.mood;
-                
-                this.elements.currentTempo.textContent = params.tempo;
-                this.elements.currentMood.textContent = params.mood;
-                this.elements.currentSequenceLength.textContent = params.sequenceLength;
             }
 
             updateSequenceDisplay(sequence) {
@@ -569,6 +583,73 @@
 
             updateTimestamp() {
                 this.elements.timestamp.textContent = new Date().toLocaleTimeString();
+            }
+
+            loadMidiDevices() {
+                this.socket.emit('get-midi-devices');
+            }
+
+            setMidiInputDevice(deviceInfo) {
+                this.socket.emit('set-midi-input', deviceInfo);
+                this.showMessage(`Setting MIDI input to: ${deviceInfo.deviceName}`, 'success');
+            }
+
+            setMidiOutputDevice(deviceInfo) {
+                this.socket.emit('set-midi-output', deviceInfo);
+                this.showMessage(`Setting MIDI output to: ${deviceInfo.deviceName}`, 'success');
+            }
+
+            updateMidiDevicesList(devices) {
+                // Update input devices list
+                const inputSelect = this.elements.midiInputSelect;
+                inputSelect.innerHTML = '<option value="">Select input device...</option>';
+                
+                if (devices && devices.input && devices.input.available) {
+                    devices.input.available.forEach((name, index) => {
+                        const option = document.createElement('option');
+                        option.value = JSON.stringify({ deviceName: name, deviceIndex: index });
+                        option.textContent = `${index}: ${name}`;
+                        if (name.toLowerCase().includes('x-touch')) {
+                            option.selected = true;
+                        }
+                        inputSelect.appendChild(option);
+                    });
+                }
+
+                // Update output devices list
+                const outputSelect = this.elements.midiOutputSelect;
+                outputSelect.innerHTML = '<option value="">Select output device...</option>';
+                
+                // Parse the text response from MCP server
+                if (devices && devices.output && devices.output.content && devices.output.content[0] && devices.output.content[0].text) {
+                    const text = devices.output.content[0].text;
+                    const lines = text.split('\n');
+                    
+                    lines.forEach(line => {
+                        const match = line.match(/^(\d+): (.+)$/);
+                        if (match) {
+                            const index = parseInt(match[1]);
+                            const name = match[2];
+                            const option = document.createElement('option');
+                            option.value = JSON.stringify({ deviceName: name, deviceIndex: index });
+                            option.textContent = `${index}: ${name}`;
+                            if (name.toLowerCase().includes('um-1')) {
+                                option.selected = true;
+                            }
+                            outputSelect.appendChild(option);
+                        }
+                    });
+                }
+            }
+
+            updateMidiStatus(status) {
+                // Status updates for MIDI devices (for console logging)
+                if (status.outputDevice) {
+                    console.log(`MIDI Output: ${status.outputDevice}`);
+                }
+                if (status.inputDevice) {
+                    console.log(`MIDI Input: ${status.inputDevice}`);
+                }
             }
         }
 
