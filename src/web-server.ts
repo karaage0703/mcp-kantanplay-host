@@ -69,20 +69,20 @@ export class WebServer {
       socket.on("get-midi-devices", async () => {
         try {
           const devices: any = {};
-          
+
           // Get MCP output devices
           if (this.mcpClient) {
             devices.output = await this.mcpClient.listMidiDevices();
           }
-          
+
           // Get local input devices
           if (this.midiController) {
             devices.input = {
               available: this.midiController.listInputPorts(),
-              current: null // Will be set by the controller
+              current: null, // Will be set by the controller
             };
           }
-          
+
           socket.emit("midi-devices", devices);
         } catch (error) {
           console.error("Failed to get MIDI devices:", error);
@@ -90,7 +90,7 @@ export class WebServer {
         }
       });
 
-      socket.on("set-midi-output", async (data: { deviceName: string, deviceIndex: number }) => {
+      socket.on("set-midi-output", async (data: { deviceName: string; deviceIndex: number }) => {
         if (this.mcpClient) {
           try {
             await this.mcpClient.setMidiOutputDevice(data.deviceIndex);
@@ -103,11 +103,13 @@ export class WebServer {
         }
       });
 
-      socket.on("set-midi-input", (data: { deviceName: string, deviceIndex: number }) => {
+      socket.on("set-midi-input", (data: { deviceName: string; deviceIndex: number }) => {
         if (this.midiController) {
           try {
             this.emit("set-midi-input", data);
-            console.log(`🎛️ MIDI input change requested: ${data.deviceName} (index: ${data.deviceIndex})`);
+            console.log(
+              `🎛️ MIDI input change requested: ${data.deviceName} (index: ${data.deviceIndex})`,
+            );
           } catch (error) {
             console.error("Failed to set MIDI input device:", error);
             socket.emit("error", "Failed to set MIDI input device");

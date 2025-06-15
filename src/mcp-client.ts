@@ -67,7 +67,6 @@ export class MCPClient {
     });
   }
 
-
   async sendSimultaneousNotes(notes: number[], duration: number = 0.5): Promise<unknown> {
     return await this.callTool("send_simultaneous_notes", {
       notes,

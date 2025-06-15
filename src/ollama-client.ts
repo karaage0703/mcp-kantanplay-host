@@ -124,7 +124,6 @@ Output only numbers:`;
     return sequence;
   }
 
-
   async listModels(): Promise<string[]> {
     try {
       const response = await axios.get(`${this.baseUrl}/api/tags`);

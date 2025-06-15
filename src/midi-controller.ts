@@ -58,17 +58,17 @@ export class MidiController {
     if (this.currentInputPort >= 0) {
       this.input.closePort();
       // Create new input instance to avoid listener conflicts
-      this.input = new (require("midi")).Input();
+      this.input = new (require("midi").Input)();
     }
-    
+
     this.input.openPort(portIndex);
     this.currentInputPort = portIndex;
     this.currentInputPortName = this.input.getPortName(portIndex);
-    
+
     console.log(`🎛️ Opened MIDI input port: ${this.currentInputPortName} (index: ${portIndex})`);
-    
+
     this.input.on("message", (_deltaTime: number, message: number[]) => {
-      console.log(`🎵 MIDI message received: [${message.join(', ')}]`);
+      console.log(`🎵 MIDI message received: [${message.join(", ")}]`);
       this.handleMidiMessage(message);
     });
   }
@@ -79,16 +79,18 @@ export class MidiController {
 
   private handleMidiMessage(message: number[]): void {
     const [status, controller, value] = message;
-    
-    console.log(`🎛️ Processing MIDI: Status=${status.toString(16)}, Controller=${controller}, Value=${value}`);
+
+    console.log(
+      `🎛️ Processing MIDI: Status=${status.toString(16)}, Controller=${controller}, Value=${value}`,
+    );
 
     if ((status & 0xf0) === 0xb0) {
       console.log(`✅ Control Change message detected (CC${controller} = ${value})`);
-      
+
       const mapping = XTOUCH_MINI_MAPPING.find((m) => m.controller === controller);
       if (mapping) {
         console.log(`🎯 Found mapping for CC${controller} -> ${mapping.parameter}`);
-        
+
         const normalizedValue = value / 127;
         const scaledValue = mapping.min + normalizedValue * (mapping.max - mapping.min);
 
@@ -107,7 +109,9 @@ export class MidiController {
           this.parameters.mood = moods[Math.min(moodIndex, moods.length - 1)];
         }
 
-        console.log(`📡 Parameter updated: ${mapping.parameter} = ${this.parameters[mapping.parameter]}`);
+        console.log(
+          `📡 Parameter updated: ${mapping.parameter} = ${this.parameters[mapping.parameter]}`,
+        );
 
         if (this.onParameterChange) {
           this.onParameterChange({ ...this.parameters });
@@ -136,7 +140,7 @@ export class MidiController {
   getCurrentInputPort(): { index: number; name: string } {
     return {
       index: this.currentInputPort,
-      name: this.currentInputPortName
+      name: this.currentInputPortName,
     };
   }
 

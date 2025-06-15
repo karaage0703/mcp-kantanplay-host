@@ -42,7 +42,7 @@ export class MusicGenerator {
         notes = this.getFallbackSequence(params);
       }
 
-      let validNotes = notes.filter(isValidKantanPlayNote);
+      const validNotes = notes.filter(isValidKantanPlayNote);
 
       // }
 
@@ -228,8 +228,6 @@ export class MusicGenerator {
       }
     }
   }
-
-
 
   private addToRecentSequences(sequence: number[]): void {
     this.recentSequences.push([...sequence]);

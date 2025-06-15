@@ -35,8 +35,8 @@ export class OllamaClientSimple {
           options: {
             temperature: 0.9,
             top_p: 0.9,
-            repeat_penalty: 1.2
-          }
+            repeat_penalty: 1.2,
+          },
         },
         {
           timeout: 30000,
@@ -75,7 +75,7 @@ Example: 60,59,60,64,67,60,64,67`;
       }
 
       // Simple debug output
-      console.log(`🎵 Simple sequence: [${notes.join(', ')}]`);
+      console.log(`🎵 Simple sequence: [${notes.join(", ")}]`);
 
       // Adjust length
       if (notes.length > params.sequenceLength) {
