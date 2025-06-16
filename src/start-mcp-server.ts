@@ -3,8 +3,9 @@ import * as path from "path";
 
 export function startMCPServer(): Promise<void> {
   return new Promise((resolve, reject) => {
-    const serverDir = "/Users/karaage/GitHub/mcp-midi-server";
-    const serverPath = path.join(serverDir, "kantanplay-midi-server.py");
+    const serverDir = process.env.MCP_PYTHON_SERVER_PATH || "/Users/karaage/GitHub/mcp-midi-server";
+    const serverScript = process.env.MCP_SERVER_SCRIPT || "kantanplay-midi-server.py";
+    const serverPath = path.join(serverDir, serverScript);
 
     const uvProcess = spawn("uv", ["run", "python", serverPath], {
       cwd: serverDir,

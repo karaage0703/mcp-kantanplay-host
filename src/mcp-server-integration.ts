@@ -13,14 +13,15 @@ export class MCPServerIntegration {
   constructor(config: MCPServerConfig) {
     // If pythonServerPath is provided, run the Python server directly
     if (config.pythonServerPath) {
+      const serverScript = process.env.MCP_SERVER_SCRIPT || "kantanplay-midi-server.py";
       this.mcpClient = new MCPClient(
         "uv",
-        ["run", "python", "kantanplay-midi-server.py"],
+        ["run", "python", serverScript],
         config.pythonServerPath,
       );
     } else {
       // Otherwise, use the shell script approach
-      const scriptPath = "/Users/karaage/GitHub/mcp-kantanplay-host/start-mcp-server.sh";
+      const scriptPath = "/home/karaage/mcp-kantanplay-host/start-mcp-server.sh";
       this.mcpClient = new MCPClient(scriptPath, [], config.serverPath);
     }
   }

@@ -506,12 +506,7 @@
 
                 this.elements.midiInputSelect.addEventListener('change', (e) => {
                     if (e.target.value) {
-                        try {
-                            const deviceInfo = JSON.parse(e.target.value);
-                            this.setMidiInputDevice(deviceInfo);
-                        } catch (error) {
-                            console.error('Failed to parse input device info:', error);
-                        }
+                        this.setMidiInputDevice({ deviceName: e.target.value });
                     }
                 });
 
@@ -639,16 +634,16 @@
             }
 
             updateMidiDevicesList(devices) {
-                // Update input devices list
+                // Update input devices list (Raw MIDI devices)
                 const inputSelect = this.elements.midiInputSelect;
                 inputSelect.innerHTML = '<option value="">Select input device...</option>';
                 
                 if (devices && devices.input && devices.input.available) {
-                    devices.input.available.forEach((name, index) => {
+                    devices.input.available.forEach((devicePath) => {
                         const option = document.createElement('option');
-                        option.value = JSON.stringify({ deviceName: name, deviceIndex: index });
-                        option.textContent = `${index}: ${name}`;
-                        if (name.toLowerCase().includes('x-touch')) {
+                        option.value = devicePath;
+                        option.textContent = devicePath;
+                        if (devicePath === devices.input.current || devicePath.includes('midi-xtouch')) {
                             option.selected = true;
                         }
                         inputSelect.appendChild(option);

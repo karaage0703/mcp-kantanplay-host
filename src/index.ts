@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import { OllamaClient } from "./ollama-client";
-import { MidiController } from "./midi-controller";
+import { RawMidiController } from "./raw-midi-controller";
 import { MusicGenerator } from "./music-generator";
 import { MCPServerIntegration } from "./mcp-server-integration";
 import { MusicVisualizer } from "./visualization";
@@ -20,7 +20,7 @@ interface AppConfig {
 
 class KantanPlayHost {
   private ollamaClient: OllamaClient;
-  private midiController: MidiController;
+  private midiController: RawMidiController;
   private musicGenerator: MusicGenerator;
   private mcpIntegration: MCPServerIntegration;
   private webServer?: WebServer;
@@ -28,7 +28,7 @@ class KantanPlayHost {
 
   constructor(config: AppConfig) {
     this.ollamaClient = new OllamaClient(config.ollamaUrl, config.ollamaModel);
-    this.midiController = new MidiController();
+    this.midiController = new RawMidiController();
 
     this.mcpIntegration = new MCPServerIntegration({
       serverPath: config.mcpServerPath,
@@ -56,40 +56,32 @@ class KantanPlayHost {
     this.setupMidiController(config.midiInputPort, config.midiOutputPort);
   }
 
-  private setupMidiController(inputPort?: number, _outputPort?: number): void {
-    const inputPorts = this.midiController.listInputPorts();
-    const outputPorts = this.midiController.listOutputPorts();
+  private setupMidiController(_inputPort?: number, _outputPort?: number): void {
+    const rawDevices = this.midiController.listRawMidiDevices();
 
-    console.log("Available MIDI input ports:");
-    inputPorts.forEach((port, index) => {
-      console.log(`  ${index}: ${port}`);
+    console.log("Available Raw MIDI devices:");
+    rawDevices.forEach((device) => {
+      console.log(`  ${device}`);
     });
 
-    console.log("Available MIDI output ports:");
-    outputPorts.forEach((port, index) => {
-      console.log(`  ${index}: ${port}`);
-    });
-
-    // Find X-Touch Mini for input
-    let xtouchIndex = -1;
-    for (let i = 0; i < inputPorts.length; i++) {
-      if (
-        inputPorts[i].toLowerCase().includes("x-touch") ||
-        inputPorts[i].toLowerCase().includes("mini")
-      ) {
-        xtouchIndex = i;
-        break;
+    // Try to open X-Touch device first
+    if (rawDevices.includes("/dev/midi-xtouch")) {
+      try {
+        this.midiController.openDevice("/dev/midi-xtouch");
+        console.log("Opened X-Touch Mini device: /dev/midi-xtouch");
+      } catch (err) {
+        console.error("Failed to open /dev/midi-xtouch:", err);
       }
-    }
-
-    if (inputPort !== undefined && inputPort < inputPorts.length) {
-      this.midiController.openInputPort(inputPort);
-      console.log(`Opened MIDI input port: ${inputPorts[inputPort]}`);
-    } else if (xtouchIndex >= 0) {
-      this.midiController.openInputPort(xtouchIndex);
-      console.log(`Opened X-Touch Mini input port: ${inputPorts[xtouchIndex]}`);
-    } else if (inputPorts.length > 0) {
-      console.log(`⚠️  X-Touch Mini not found, skipping MIDI controller setup`);
+    } else if (rawDevices.length > 0) {
+      // Fall back to first available device
+      try {
+        this.midiController.openDevice(rawDevices[0]);
+        console.log(`Opened MIDI device: ${rawDevices[0]}`);
+      } catch (err) {
+        console.error(`Failed to open ${rawDevices[0]}:`, err);
+      }
+    } else {
+      console.log(`⚠️  No Raw MIDI devices found`);
     }
 
     // Note: We don't open output port for MIDI controller
@@ -120,15 +112,19 @@ class KantanPlayHost {
       this.midiController.updateParameters(params);
     });
 
-    this.webServer.on<{ deviceName: string; deviceIndex: number }>("set-midi-input", (data) => {
-      console.log(`\n🎛️ Changing MIDI input to: ${data.deviceName} (index: ${data.deviceIndex})`);
-      this.midiController.openInputPort(data.deviceIndex);
-
-      if (this.webServer) {
-        this.webServer.broadcastMidiStatus({
-          inputDevice: data.deviceName,
-          outputDevice: null, // Keep current output device
-        });
+    this.webServer.on<{ deviceName: string }>("set-midi-input", (data) => {
+      console.log(`\n🎛️ Changing MIDI input to: ${data.deviceName}`);
+      try {
+        this.midiController.openDevice(data.deviceName);
+        
+        if (this.webServer) {
+          this.webServer.broadcastMidiStatus({
+            inputDevice: data.deviceName,
+            outputDevice: null, // Keep current output device
+          });
+        }
+      } catch (err) {
+        console.error(`Failed to open device ${data.deviceName}:`, err);
       }
     });
   }

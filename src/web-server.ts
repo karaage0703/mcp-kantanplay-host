@@ -75,11 +75,11 @@ export class WebServer {
             devices.output = await this.mcpClient.listMidiDevices();
           }
 
-          // Get local input devices
+          // Get raw MIDI input devices
           if (this.midiController) {
             devices.input = {
-              available: this.midiController.listInputPorts(),
-              current: null, // Will be set by the controller
+              available: this.midiController.listRawMidiDevices(),
+              current: this.midiController.getCurrentDevice(),
             };
           }
 
@@ -103,12 +103,12 @@ export class WebServer {
         }
       });
 
-      socket.on("set-midi-input", (data: { deviceName: string; deviceIndex: number }) => {
+      socket.on("set-midi-input", (data: { deviceName: string }) => {
         if (this.midiController) {
           try {
             this.emit("set-midi-input", data);
             console.log(
-              `🎛️ MIDI input change requested: ${data.deviceName} (index: ${data.deviceIndex})`,
+              `🎛️ MIDI input change requested: ${data.deviceName}`,
             );
           } catch (error) {
             console.error("Failed to set MIDI input device:", error);
